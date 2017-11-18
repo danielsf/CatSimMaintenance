@@ -5,51 +5,78 @@ find a rough approximation of their maximum magnitude variability
 import os
 import numpy as np
 import json
-from lsst.utils import getPackageDir
+import time
+import gc
+import multiprocessing as mproc
 from lsst.sims.catalogs.db import DBObject
-from lsst.sims.photUtils import Sed
-from lsst.sims.utils import radiansFromArcsec
 from lsst.sims.catUtils.mixins import ParametrizedLightCurveMixin
+from lsst.sims.catUtils.mixins import create_variability_cache
+
+def get_table_mins(table_tag, dmag_dict):
+    db = DBObject(database='LSSTCATSIM', host='fatboy.phys.washington.edu',
+                  port=1433, driver='mssql+pymssql')
+
+    query = 'SELECT '
+    query += 'htmid, simobjid, varParamStr '
+    query += 'FROM stars_obafgk_part_%s' % table_tag
+
+    dtype = np.dtype([('htmid', int), ('simobjid', int),
+                      ('varParamStr', str, 200)])
+
+    data_iter = get_arbitrary_chunk_iterator(query, dtype=dtype, chunk_size=10000)
+    with open('/astro/store/pogo4/danielsf/dmag_max_data/dmag_%s.txt' % table_tag, 'w') as out_file:
+        for chunk in data_iter:
+            for star in chunk:
+                param_dict = json.loads(star['varParamStr'])
+                lc_id = param_dict['p']['lc']
+                out_file.write('%d %d %d\n' % (star['htmid'], star['simobjid'], dmag_dict[lc_id]))
 
 if __name__ == "__main__":
 
     plc = ParametrizedLightCurveMixin()
-    plc.load_parametrized_light_curves()
+    variability_cache = create_variability_cache()
+    plc.load_parametrized_light_curves(variability_cache=variability_cache)
     time_arr = np.arange(0.0, 3653.0, 0.1)
     dmag_dict = {}
 
-    table_tag = '0870'
-    dtype=np.dtype([('htmid', int), ('simobjid', int),
-                    ('umag', float), ('gmag', float), ('rmag', float),
-                    ('imag', float), ('zmag', float), ('ymag', float),
-                    ('sdssr', float),
-                    ('varParamStr', str, 200), ('parallax', float)])
+    t_start = time.time()
+    for lc_id in variability_cache['_PARAMETRIZED_LC_MODELS']:
+        q_flux, d_flux = plc._calc_dflux(lc_id, time_arr,
+                                         variability_cache=variability_cache)
+        d_flux = np.where(d_flux>-q_flux, d_flux, -0.9*q_flux)
+        dmag = 2.5*np.log10(1.0+d_flux/q_flux)
+        bad = np.where(np.isnan(dmag))
+        try:
+            assert len(bad[0]) == 0
+        except:
+            print((d_flux/q_flux).min())
+            raise
+        dmag_dict[lc_id] = int(np.ceil(np.log10(np.abs(dmag).max())))
+        if len(dmag_dict) % 1000 == 0:
+            elapsed = (time.time()-t_start)/3600.0
+            per = elapsed/len(dmag_dict)
+            total = len(variability_cache['_PARAMETRIZED_LC_MODELS'])*per
+            print('%d took %.2e hrs; per %.2e total %.2e' %
+                  (len(dmag_dict),elapsed,per,total))
 
-    query = 'SELECT TOP 1000000'
-    query += 'htmid, simobjid, umag, gmag, rmag, imag, zmag, ymag, sdssr, '
-    query += 'varParamStr, parallax '
-    query += 'FROM stars_obafgk_part_%s' % table_tag
+    del variability_cache
+    gc.collect()
 
-    db = DBObject(database='LSSTCATSIM', host='fatboy.phys.washington.edu',
-                  port=1433, driver='mssql+pymssql')
+    with open('/astro/store/pogo4/danielsf/dmag_max_data/dmag_dict.txt','w') as out_file:
+        for lc_id in dmag_dict:
+            out_file.write('%d %d\n' % (lc_id, dmag_dict[lc_id]))
 
-    results_iter = db.get_arbitrary_chunk_iterator(query, dtype=dtype, chunk_size=10000)
+    print('loaded dmag_dict')
 
-    cutoff= 0.05
-    ct_lt = 0
-    ct_ge = 0
-    for chunk in results_iter:
-        for star in chunk:
-            var_dict = json.loads(star['varParamStr'])
-            lc_id = var_dict['p']['lc']
-            if lc_id not in dmag_dict:
-                q_flux, d_flux = plc._calc_dflux(lc_id, time_arr)
-                dmag = 2.5*np.log10(1.0+d_flux/q_flux)
-                dmag_max = np.abs(dmag).max()
-                dmag_dict[lc_id] = dmag_max
-            dmag = dmag_dict[lc_id]
-            if dmag<cutoff:
-                ct_lt +=1
-            else:
-                ct_ge += 1
-            print('lt %d ge %d -- %d' % (ct_lt,ct_ge,len(dmag_dict)))
+    p_list = []
+    for tag in ('0870', '1200', '1100', '1160', '1180', '1220', '1250', '1400'):
+        p = mproc.Process(target=get_table_mins,
+                          args=(tag, dmag_dict))
+
+        p.start()
+        p_list.append(p)
+
+    for p in p_list:
+        p.join()
+
+    print('all done')
