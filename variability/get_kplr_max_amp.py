@@ -12,7 +12,10 @@ from lsst.sims.catalogs.db import DBObject
 from lsst.sims.catUtils.mixins import ParametrizedLightCurveMixin
 from lsst.sims.catUtils.mixins import create_variability_cache
 
+_out_dir = os.path.join('/astro/store/pogo4/danielsf/dmag_max_data')
+
 def get_table_mins(table_tag, dmag_dict):
+    global _out_dir
     db = DBObject(database='LSSTCATSIM', host='fatboy.phys.washington.edu',
                   port=1433, driver='mssql+pymssql')
 
@@ -24,7 +27,7 @@ def get_table_mins(table_tag, dmag_dict):
                       ('varParamStr', str, 200)])
 
     data_iter = get_arbitrary_chunk_iterator(query, dtype=dtype, chunk_size=10000)
-    with open('/astro/store/pogo4/danielsf/dmag_max_data/dmag_%s.txt' % table_tag, 'w') as out_file:
+    with open(os.path.join(_out_dir,'dmag_%s.txt' % table_tag), 'w') as out_file:
         for chunk in data_iter:
             for star in chunk:
                 param_dict = json.loads(star['varParamStr'])
@@ -32,6 +35,10 @@ def get_table_mins(table_tag, dmag_dict):
                 out_file.write('%d %d %d\n' % (star['htmid'], star['simobjid'], dmag_dict[lc_id]))
 
 if __name__ == "__main__":
+
+    global _out_dir
+    if not os.path.isdir(_out_dir):
+        raise RuntimeError('%s is not a dir' % _out_dir)
 
     plc = ParametrizedLightCurveMixin()
     variability_cache = create_variability_cache()
@@ -70,7 +77,7 @@ if __name__ == "__main__":
     del variability_cache
     gc.collect()
 
-    with open('/astro/store/pogo4/danielsf/dmag_max_data/dmag_dict.txt','w') as out_file:
+    with open(os.path.join(_out_dir,'dmag_dict.txt'),'w') as out_file:
         for lc_id in dmag_dict:
             out_file.write('%d %d\n' % (lc_id, dmag_dict[lc_id]))
 
