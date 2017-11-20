@@ -44,14 +44,22 @@ if __name__ == "__main__":
         q_flux, d_flux = plc._calc_dflux(lc_id, time_arr,
                                          variability_cache=variability_cache)
         d_flux = np.where(d_flux>-q_flux, d_flux, -0.9*q_flux)
-        dmag = 2.5*np.log10(1.0+d_flux/q_flux)
-        bad = np.where(np.isnan(dmag))
         try:
+            dmag = 2.5*np.log10(1.0+d_flux/q_flux)
+            dmag = np.where(np.abs(dmag)>0.0, dmag, 1.0e-20)
+            dmag = np.where(np.abs(dmag)<1.0e10, dmag, 1.0e10)
+            bad = np.where(np.logical_or(np.isnan(dmag),np.isinf(dmag)))
             assert len(bad[0]) == 0
+            dmag_dict[lc_id] = int(np.ceil(np.log10(np.abs(dmag).max())))
         except:
-            print((d_flux/q_flux).min())
+            print(lc_id)
+            print(d_flux.min(),d_flux.max(),q_flux)
+            print(dmag.min())
+            print(dmag.max())
+            is_inf = np.where(np.isinf(np.log10(np.abs(dmag).max())))
+            print(is_inf)
+            print(dmag[is_inf])
             raise
-        dmag_dict[lc_id] = int(np.ceil(np.log10(np.abs(dmag).max())))
         if len(dmag_dict) % 1000 == 0:
             elapsed = (time.time()-t_start)/3600.0
             per = elapsed/len(dmag_dict)
