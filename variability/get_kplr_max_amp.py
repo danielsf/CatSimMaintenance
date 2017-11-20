@@ -12,10 +12,8 @@ from lsst.sims.catalogs.db import DBObject
 from lsst.sims.catUtils.mixins import ParametrizedLightCurveMixin
 from lsst.sims.catUtils.mixins import create_variability_cache
 
-_out_dir = os.path.join('/astro/store/pogo4/danielsf/dmag_max_data')
 
-def get_table_mins(table_tag, dmag_dict):
-    global _out_dir
+def get_table_mins(table_tag, dmag_dict,_out_dir):
     db = DBObject(database='LSSTCATSIM', host='fatboy.phys.washington.edu',
                   port=1433, driver='mssql+pymssql')
 
@@ -36,7 +34,8 @@ def get_table_mins(table_tag, dmag_dict):
 
 if __name__ == "__main__":
 
-    global _out_dir
+    _out_dir = os.path.join('/astro/store/pogo4/danielsf/dmag_max_data')
+
     if not os.path.isdir(_out_dir):
         raise RuntimeError('%s is not a dir' % _out_dir)
 
@@ -86,7 +85,7 @@ if __name__ == "__main__":
     p_list = []
     for tag in ('0870', '1200', '1100', '1160', '1180', '1220', '1250', '1400'):
         p = mproc.Process(target=get_table_mins,
-                          args=(tag, dmag_dict))
+                          args=(tag, dmag_dict, _out_dir))
 
         p.start()
         p_list.append(p)
