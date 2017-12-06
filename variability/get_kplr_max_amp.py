@@ -36,6 +36,8 @@ if __name__ == "__main__":
 
     _out_dir = os.path.join('/astro/store/pogo4/danielsf/dmag_max_data')
 
+    _out_dir = '.'
+
     if not os.path.isdir(_out_dir):
         raise RuntimeError('%s is not a dir' % _out_dir)
 
@@ -81,6 +83,7 @@ if __name__ == "__main__":
             out_file.write('%d %d\n' % (lc_id, dmag_dict[lc_id]))
 
     print('loaded dmag_dict')
+    exit()
 
     p_list = []
     for tag in ('0870', '1200', '1100', '1160', '1180', '1220', '1250', '1400'):
