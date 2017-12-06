@@ -13,7 +13,7 @@ from lsst.sims.utils import radiansFromArcsec
 from lsst.sims.photUtils import BandpassDict
 
 
-def get_mlt_grid():
+def get_dust_grid():
 
     # Construct a look-up table to determine the factor
     # by which to multiply the flares' flux to account for
@@ -63,7 +63,7 @@ def get_mlt_grid():
 
 if __name__ == "__main__":
 
-    mlt_grid = get_mlt_grid()
+    dust_grid = get_dust_grid()
 
     lc_data_dir = os.path.join(getPackageDir('sims_data'),
                                'catUtilsData')
