@@ -63,6 +63,10 @@ def get_dust_grid():
 
 if __name__ == "__main__":
 
+    out_name = 'test_mlt_dmag.txt'
+    if os.path.exists(out_name):
+        raise RuntimeError("%s exists" % out_name)
+
     dust_grid = get_dust_grid()
 
     lc_data_dir = os.path.join(getPackageDir('sims_data'),
@@ -71,22 +75,38 @@ if __name__ == "__main__":
     mdwarf_name = 'mdwarf_flare_light_curves_171012.npz'
 
     mag_name_list = ('u', 'g', 'r', 'i', 'z', 'y')
+    flavor_to_int = {}
+    flavor_to_int['late_active']  = 1
+    flavor_to_int['late_inactive'] = 1
+    flavor_to_int['mid_active'] = 2
+    flavor_to_int['mid_inactive'] = 3
+    flavor_to_int['early_active'] = 4
+    flavor_to_int['early_inactive'] = 5
+
+    lc_to_int = {}
+    for i_lc in range(4):
+        for flavor in ('late_active', 'late_inactive', 'early_active', 'early_inactive',
+                       'mid_active', 'mid_inactive'):
+
+            lc_to_int['%s_%d' % (flavor, i_lc)] = flavor_to_int[flavor]*10+i_lc
 
     lc_data = np.load(os.path.join(lc_data_dir, mdwarf_name))
     dflux_dict = {}
     for flavor in ('late_active', 'early_inactive', 'early_active',
                    'mid_active', 'mid_inactive'):
         for i_lc in range(4):
+            lc_name = '%s_%d' % (flavor, i_lc)
+            dflux_dict[lc_to_int[lc_name]] = {}
             for mag_name in mag_name_list:
                 col_name = '%s_%d_%s' % (flavor, i_lc, mag_name)
                 dflux = lc_data[col_name]
-                dflux_dict[col_name] = np.abs(dflux).max()
+                dflux_dict[lc_to_int[lc_name]][mag_name] = np.abs(dflux).max()
 
     print('loaded dflux dict')
     ct_lt = 0
     ct_ge = 0
     cutoff=0.05
-    table_tag = '0870'
+    table_tag = '1160'
     dtype=np.dtype([('htmid', int), ('simobjid', int),
                     ('umag', float), ('gmag', float), ('rmag', float),
                     ('imag', float), ('zmag', float), ('ymag', float),
@@ -94,45 +114,71 @@ if __name__ == "__main__":
                     ('varParamStr', str, 200), ('parallax', float),
                     ('ebv', float)])
 
-    query = 'SELECT TOP 1000000'
+    query = 'SELECT '
     query += 'htmid, simobjid, umag, gmag, rmag, imag, zmag, ymag, sdssr, '
     query += 'varParamStr, parallax, ebv '
-    query += 'FROM stars_mlt_part_%s' % table_tag
+    query += 'FROM stars_mlt_part_%s ' % table_tag
+    query += 'TABLESAMPLE(1 percent)'
 
     db = DBObject(database='LSSTCATSIM', host='fatboy.phys.washington.edu',
                   port=1433, driver='mssql+pymssql')
 
-    results_iter = db.get_arbitrary_chunk_iterator(query, dtype=dtype, chunk_size=10000)
+    results_iter = db.get_arbitrary_chunk_iterator(query, dtype=dtype, chunk_size=100000)
 
-    spec = Sed()
+    dummy_sed = Sed()
     _au_to_parsec = 1.0/206265.0
     _cm_per_parsec = 3.08576e18
 
-    for chunk in results_iter:
+
+    ct_bad = 0
+    ct_total = 0
+    for i_chunk, chunk in enumerate(results_iter):
         parallax = radiansFromArcsec(0.001*chunk['parallax'])
         dd = _au_to_parsec/parallax
         sphere_area = 4.0*np.pi*np.power(dd*_cm_per_parsec, 2)
 
         flux_factor = 1.0/sphere_area
 
+        dust_factor = {}
+        for mag_name in mag_name_list:
+            dust_factor[mag_name] = np.interp(chunk['ebv'], dust_grid['ebv'], dust_grid[mag_name])
+
+        lc_int_dex = np.ones(len(chunk), dtype=int)
+        dmag_max = np.zeros(len(chunk), dtype=float)
+        mag_min = np.zeros(len(chunk), dtype=float)
         for i_star, star in enumerate(chunk):
             var_dict = json.loads(star['varParamStr'])
             lc = var_dict['p']['lc']
-            if 'late' in lc:
-                lc = lc.replace('inactive','active')
-            lt = True
 
+            lc_int_dex[i_star] = lc_to_int[lc]
+
+        for lc_id in np.unique(lc_int_dex):
+            valid_stars = np.where(lc_int_dex==lc_id)
+            if len(valid_stars[0])==0:
+                continue
+            local_flux_factor = flux_factor[valid_stars]
+            local_dmag_max = np.zeros(len(valid_stars[0]), dtype=float)
+            local_mag_min = 41.0*np.ones(len(valid_stars[0]), dtype=float)
             for mag_name in mag_name_list:
-                base_mag = star['%smag' % mag_name]
-                base_flux = spec.fluxFromMag(base_mag)
-                dmag = 2.5*np.log10(1.0 +dflux_dict['%s_%s' % (lc,mag_name)]*flux_factor[i_star]/base_flux)
-                if np.abs(dmag) >= cutoff:
-                    lt = False
-                    break
-            if lt:
-                ct_lt += 1
-            else:
-                ct_ge += 1
+                mag_0 = chunk['%smag' % mag_name][valid_stars]
+                local_dust_factor = dust_factor[mag_name][valid_stars]
+                flux_0 = dummy_sed.fluxFromMag(mag_0)
+                dflux = dflux_dict[lc_id][mag_name]*local_dust_factor*local_flux_factor
+                total_flux = flux_0 + dflux
+                mag = dummy_sed.magFromFlux(total_flux)
+                dmag = 2.5*np.log10(1.0+dflux/flux_0)
+                local_dmag_max = np.where(dmag>local_dmag_max, dmag, local_dmag_max)
+                local_mag_min = np.where(mag<local_mag_min, mag, local_mag_min)
 
-            if dmag>9.0:
-                print('lt %d ge %d %.2e %.2e %.2e %s' % (ct_lt, ct_ge, dmag, star['rmag'], star['sdssr'], lc))
+            dmag_max[valid_stars] = local_dmag_max
+            mag_min[valid_stars] = local_mag_min
+
+        ct_total += len(chunk)
+        with open(out_name,'a') as out_file:
+            for i_star in range(len(chunk)):
+                if mag_min[i_star]>24.89 or dmag_max[i_star]<0.001:
+                    ct_bad += 1
+                out_file.write('%d %d %e %e\n' %
+                (chunk['htmid'][i_star], chunk['simobjid'][i_star],
+                 dmag_max[i_star],mag_min[i_star]))
+        print('ct_bad %d of %d' % (ct_bad, ct_total))
