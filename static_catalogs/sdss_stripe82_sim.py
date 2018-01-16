@@ -1,4 +1,11 @@
-from lsst.utils import getPackageDir
+import numpy as np
+from lsst.sims.catUtils.baseCatalogModels import StarObj
+from lsst.sims.utils import getAllTrixels, levelFromHtmid
+from lsst.sims.utils import halfSpaceFromRaDec, trixelFromHtmid, findHtmid
+from lsst.sims.catUtils.utils import StellarAlertDBObjMixin
+
+class StarObjHTMID(StarObj, StellarAlertDBObjMixin):
+    pass
 
 
 def get_kurucz_phys(sed_name):
@@ -17,7 +24,7 @@ def get_kurucz_phys(sed_name):
 
     metallicity = 0.1*metallicity_sgn*float(new_name[0][2:])
 
-    teff = float(new_name[-2])
+    teff = float(new_name[-1])
 
     logg = 0.1*np.float(new_name[3][1:])
 
@@ -31,7 +38,7 @@ def get_wd_phys(sed_name):
     and log(surface gravity)
     """
     new_name = sed_name.replace('.','_').split('_')
-    teff = float(new_name[-2])
+    teff = float(new_name[-1])
     if new_name[1]!='He':
         logg = 0.1*float(new_name[2])
     else:
@@ -79,6 +86,10 @@ def get_physical_characteristics(sed_name):
     Return (in this order) Teff, metallicity (FeH), log(g)
     """
     sed_name = sed_name.strip()
+    if sed_name.endswith('.gz'):
+        sed_name = sed_name.replace('.gz','')
+    if sed_name.endswith('.txt.'):
+        sed_name = sed_name.replace('.txt','')
 
     if not hasattr(get_physical_characteristics, 'teff_dict'):
         get_physical_characteristics.teff_dict = {}
@@ -117,3 +128,80 @@ def get_physical_characteristics(sed_name):
     get_physical_characteristics.logg_dict[sed_name] = gg
 
     return tt, mm, gg
+
+
+if __name__ == "__main__":
+
+    trixel_dict = getAllTrixels(6)
+
+    hs1 = halfSpaceFromRaDec(0.0, 90.0, 91.3)
+    hs2 = halfSpaceFromRaDec(0.0, -90.0, 91.3)
+    for ra in range(0,360,20):
+        htmid = findHtmid(ra,0.0,max_level=6)
+        tx = trixelFromHtmid(htmid)
+        assert hs1.contains_trixel(tx) != 'outside'
+        assert hs2.contains_trixel(tx) != 'outside'
+
+
+    valid_htmid = []
+    n_6 = 0
+    for htmid in trixel_dict:
+        if levelFromHtmid(htmid) != 6:
+            continue
+        n_6 += 1
+        tx = trixel_dict[htmid]
+        if hs1.contains_trixel(tx) != 'outside':
+            if hs2.contains_trixel(tx) != 'outside':
+                valid_htmid.append(htmid)
+    print(n_6,len(valid_htmid))
+
+    db = StarObjHTMID(database='LSSTCATSIM', host='fatboy.phys.washington.edu',
+                      port=1433, driver='mssql+pymssql')
+
+    colnames = ['ra', 'decl', 'gal_l', 'gal_b',
+                'mura', 'mudecl', 'parallax',
+                'vrad', 'sedfilename',
+                'umag', 'gmag', 'rmag', 'imag', 'zmag', 'ymag']
+
+    constraint = 'rmag<=23.0 AND rmag>=13.0 AND '
+    constraint += '(ra>=300.0 OR ra<=60.0) AND '
+    constraint += 'decl>=-1.27 AND decl<=1.27'
+    ct = 0
+    with open('stripe_82_catalog.txt', 'w') as out_file:
+        out_file.write('# Columns are:\n')
+        out_file.write('# RA (degrees)\n')
+        out_file.write('# Dec (degrees)\n')
+        out_file.write('# galactic longitude (degrees)\n')
+        out_file.write('# galactic lagitutde (degrees)\n')
+        out_file.write('# proper motion RA (mas/yr)\n')
+        out_file.write('# proper motion Dec (mas/yr)\n')
+        out_file.write('# parallax (mas)\n')
+        out_file.write('# radial velocity (km/s)\n')
+        out_file.write('# Teff (Kelvin)\n')
+        out_file.write('# FeH\n')
+        out_file.write('# log(g)\n')
+        out_file.write('# umag\n')
+        out_file.write('# gmag\n')
+        out_file.write('# rmag\n')
+        out_file.write('# imag\n')
+        out_file.write('# zmag\n')
+        out_file.write('# ymag\n')
+
+        for i_htmid, htmid in enumerate(valid_htmid):
+
+            data_iter = db.query_columns_htmid(colnames=colnames, constraint=constraint,
+                                               chunk_size=100000, htmid=htmid)
+
+
+            for chunk in data_iter:
+                ct += len(chunk)
+                for star in chunk:
+                    params = get_physical_characteristics(star['sedfilename'])
+                    out_file.write('%.6f %.6f ' % (star['ra'], star['decl']))
+                    out_file.write('%.6f %.6f ' % (star['gal_l'], star['gal_b']))
+                    out_file.write('%e %e %e ' % (star['mura'], star['mudecl'], star['parallax']))
+                    out_file.write('%e %e %e %e ' % (star['vrad'], params[0], params[1], params[2]))
+                    out_file.write('%.4f %.4f %.4f ' % (star['umag'], star['gmag'], star['rmag']))
+                    out_file.write('%.4f %.4f %.4f ' % (star['imag'], star['zmag'], star['ymag']))
+                    out_file.write('\n')
+                print('%d stars -- i_htmid %d' % (ct, i_htmid))
