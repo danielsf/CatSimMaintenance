@@ -5,48 +5,105 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
+from PhoSimTransform import PhoSimPixelTransformer
+from lsst.sims.coordUtils import lsst_camera
+from lsst.afw.cameraGeom import SCIENCE
+
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--chip', type=str, default=None)
+parser.add_argument('--obs', type=int, default=None)
 args = parser.parse_args()
-if args.chip is None:
-    raise RuntimeError("must specify chip")
+if args.obs is None:
+    raise RuntimeError("must specify obs")
 
-phosim_dir = os.path.join("/Users", "danielsf", "physics", "phosim_release")
+phosim_dir = "phosim_output"
 assert os.path.isdir(phosim_dir)
-centroid_file = os.path.join(phosim_dir, 'placement_grid',
-                             'centroid_lsst_e_230_f2_%s_E000.txt' % args.chip)
-assert os.path.exists(centroid_file)
+phosim_file_list = os.listdir(phosim_dir)
+for file_name in phosim_file_list:
+    if 'centroid' in file_name:
+        params = file_name.split('_')
+        if int(params[3]) == args.obs:
+            filter_name = params[4]
+            break
+
+
+camera = lsst_camera()
+det_name_list = []
+for det in camera:
+    if det.getType() != SCIENCE:
+        continue
+    det_name_list.append(det.getName())
 
 phosim_dtype = np.dtype([('id', int), ('phot', int),
                          ('x', float), ('y', float)])
 
-phosim_data = np.genfromtxt(centroid_file, dtype=phosim_dtype,
-                            comments=None, skip_header=1)
+chip_grid = []
+phosim_x = None
+phosim_y = None
+phosim_id = None
+for det_name in det_name_list:
+    m_name = det_name.replace(':','').replace(',','').replace(' ','_')
+    file_name = 'centroid_lsst_e_%d_%s_%s_E000.txt' % (args.obs, filter_name, m_name)
+    full_name = os.path.join(phosim_dir, file_name)
 
-catsim_dtype = np.dtype([('id', int), ('x', float), ('y', float),
-                         ('xmm', float), ('ymm', float)])
+    if not os.path.exists(full_name):
+        raise RuntimeError('%s does not exist' % full_name)
 
-catsim_file = os.path.join('raw_catalogs', 'star_cross_predicted_230_%s.txt' % args.chip)
-assert os.path.exists(catsim_file)
+    local_data = np.genfromtxt(full_name, dtype=phosim_dtype, comments=None,
+                               skip_header=1)
+
+    if phosim_x is None:
+        phosim_x = local_data['x']
+        phosim_y = local_data['y']
+        phosim_id = local_data['id']
+    else:
+        phosim_x = np.append(phosim_x, local_data['x'])
+        phosim_y = np.append(phosim_y, local_data['y'])
+        phosim_id = np.append(phosim_id, local_data['id'])
+
+    chip_grid += [det_name]*len(local_data)
+
+coordinate_converter = PhoSimPixelTransformer()
+phosim_xmm = []
+phosim_ymm = []
+for name, xx, yy in zip(chip_grid, phosim_x, phosim_y):
+    xmm, ymm = coordinate_converter.mmFromPix(xx, yy, name)
+    phosim_xmm.append(xmm)
+    phosim_ymm.append(ymm)
+
+phosim_xmm = np.array(phosim_xmm)
+phosim_ymm = np.array(phosim_ymm)
+
+catsim_dtype = np.dtype([('id', int), ('xmm', float), ('ymm', float)])
+
+catsim_file = 'catalogs/star_predicted_%d.txt' % args.obs
+if not os.path.exists(catsim_file):
+    raise RuntimeError('%s does not exist' % catsim_file)
 
 catsim_data = np.genfromtxt(catsim_file, dtype=catsim_dtype)
+catsim_id = catsim_data['id']
+catsim_xmm = catsim_data['xmm']
+catsim_ymm = catsim_data['ymm']
 
-print(len(phosim_data),len(catsim_data))
+sorted_dex = np.argsort(catsim_id)
+catsim_id = catsim_id[sorted_dex]
+catsim_xmm = catsim_xmm[sorted_dex]
+catsim_ymm = catsim_ymm[sorted_dex]
 
-phosim_data = phosim_data[:-1]
-assert len(catsim_data) == len(phosim_data)
+sorted_dex = np.argsort(phosim_id)
+phosim_id = phosim_id[sorted_dex]
+phosim_xmm = phosim_xmm[sorted_dex]
+phosim_ymm = phosim_ymm[sorted_dex]
 
-assert np.array_equal(phosim_data['id'], catsim_data['id'])
+assert np.array_equal(phosim_id, catsim_id)
 
-plt.figsize = (30,30)
-
-dx = phosim_data['x']-catsim_data['x']
-dy = phosim_data['y']-catsim_data['y']
+dx = phosim_xmm-catsim_xmm
+dy = phosim_ymm-catsim_ymm
 
 dd = np.sqrt(dx**2+dy**2)
 print('dd %e %e %e' % (dd.min(),np.median(dd),dd.max()))
 
-plt.quiver(catsim_data['x'], catsim_data['y'], dx, dy)
-plt.savefig('catsim_to_phosim_%s.png' % args.chip)
+plt.figsize = (30,30)
+plt.quiver(catsim_xmm, catsim_ymm, dx, dy)
+plt.savefig('figs/catsim_to_phosim_%d.png' % args.obs)
