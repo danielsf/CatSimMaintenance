@@ -107,3 +107,9 @@ print('dd %e %e %e' % (dd.min(),np.median(dd),dd.max()))
 plt.figsize = (30,30)
 plt.quiver(catsim_xmm, catsim_ymm, dx, dy)
 plt.savefig('figs/catsim_to_phosim_%d.png' % args.obs)
+
+dist_arr = np.sqrt(catsim_xmm**2+catsim_ymm**2)
+
+with open('figs/catsim_to_phosim_%d_cat.txt' % args.obs, 'w') as out_file:
+    for ii, x, y, dd, d_x, d_y in zip(phosim_id, catsim_xmm, catsim_ymm, dist_arr, dx, dy):
+        out_file.write('%d %e %e %e %e %e\n' % (ii, x, y, dd, d_x, d_y))
