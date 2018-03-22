@@ -11,13 +11,17 @@ from lsst.afw.cameraGeom import SCIENCE
 
 import argparse
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--obs', type=int, default=None)
+parser.add_argument('--phosim_dir', type=str, default='phosim_output')
+parser.add_argument('--out_dir', type=str, default='figs')
 args = parser.parse_args()
 if args.obs is None:
     raise RuntimeError("must specify obs")
 
-phosim_dir = "phosim_output"
+phosim_dir = args.phosim_dir
+out_dir = args.out_dir
 assert os.path.isdir(phosim_dir)
 phosim_file_list = os.listdir(phosim_dir)
 for file_name in phosim_file_list:
@@ -106,10 +110,10 @@ print('dd %e %e %e' % (dd.min(),np.median(dd),dd.max()))
 
 plt.figsize = (30,30)
 plt.quiver(catsim_xmm, catsim_ymm, dx, dy)
-plt.savefig('figs/catsim_to_phosim_%d.png' % args.obs)
+plt.savefig(os.path.join(out_dir,'catsim_to_phosim_%d.png') % args.obs)
 
 dist_arr = np.sqrt(catsim_xmm**2+catsim_ymm**2)
 
-with open('figs/catsim_to_phosim_%d_cat.txt' % args.obs, 'w') as out_file:
+with open(os.path.join(out_dir, 'catsim_to_phosim_%d_cat.txt' % args.obs), 'w') as out_file:
     for ii, x, y, dd, d_x, d_y in zip(phosim_id, catsim_xmm, catsim_ymm, dist_arr, dx, dy):
         out_file.write('%d %e %e %e %e %e\n' % (ii, x, y, dd, d_x, d_y))
