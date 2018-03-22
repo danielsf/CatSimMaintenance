@@ -224,7 +224,7 @@ if __name__ == "__main__":
             out_file.write('21.0 starSED/kurucz/km10_5750.fits_g10_5750.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
     with open('catalogs/star_predicted_%d.txt' % (args.obs), 'w') as out_file:
-        out_file.write('# id xpup ypup\n')
+        out_file.write('# id xmm ymm\n')
         for ii in range(len(x_mm)):
             out_file.write('%d %.17e %.17e\n' %
                            (id_grid[ii],
