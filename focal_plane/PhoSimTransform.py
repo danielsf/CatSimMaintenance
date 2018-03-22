@@ -49,7 +49,6 @@ class PhoSimPixelTransformer(object):
         chip = self._chip_data[chipName]
 
         theta = np.radians(chip['rot'])
-        print('theta %e' % chip['rot'])
         cc = np.cos(theta)
         ss = np.sin(theta)
         rotMat = np.array([[cc, -ss], [ss, cc]])
