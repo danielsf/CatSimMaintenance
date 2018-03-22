@@ -172,29 +172,72 @@ class PhoSimPixelTransformer(object):
     def __init__(self):
         self._chip_data = load_focal_plane()
 
-    def mmFromPix(self, xpix, ypix, chipName):
-        chip = self._chip_data[chipName]
+    def _chip_center_mm(self, chipName):
+        chip= self._chip_data[chipName]
         x0 = 0.001*chip['x']+chip['dx']
         y0 = 0.001*chip['y']+chip['dy']
+        return x0, y0
+
+    def _chip_rot_matrix(self, chipName):
+        chip = self._chip_data[chipName]
+
+        theta = np.radians(chip['rot'])
+        print('theta %e' % chip['rot'])
+        cc = np.cos(theta)
+        ss = np.sin(theta)
+        rotMat = np.array([[cc, -ss], [ss, cc]])
+        return rotMat
+
+
+    def mmFromPix(self, xpix, ypix, chipName):
+        chip = self._chip_data[chipName]
+        x0, y0 = self._chip_center_mm(chipName)
         dp = 0.001*chip['p_size']
 
         # rotate (1,0) and (0,1) so that x_vec and y_vec
         # reflect actual orientation of the pixel grid
-        theta = np.radians(chip['rot'])
-        cc = np.cos(theta)
-        ss = np.sin(theta)
-        rotMat = np.array([[cc, -ss], [ss, cc]])
+        rotMat = self._chip_rot_matrix(chipName)
 
-        x_vec = np.array([1.0, 0.0])
-        y_vec = np.array([0.0, 1.0])
-        x_vec = np.dot(rotMat, x_vec)
-        y_vec = np.dot(rotMat, y_vec)
+        x_pix_vec = np.array([1.0, 0.0])
+        y_pix_vec = np.array([0.0, 1.0])
+        x_pix_vec = np.dot(rotMat, x_pix_vec)
+        y_pix_vec = np.dot(rotMat, y_pix_vec)
 
         mm_vec = np.array([x0, y0])
-        mm_vec += (xpix-chip['n_x']/2)*dp*x_vec
-        mm_vec += (ypix-chip['n_y']/2)*dp*y_vec
+        mm_vec += (xpix-chip['n_x']/2)*dp*x_pix_vec
+        mm_vec += (ypix-chip['n_y']/2)*dp*y_pix_vec
 
         return mm_vec[0], mm_vec[1]
+
+    def pixFromMM(self, xmm, ymm, chipName):
+        """
+        xmm -- x coord in millimeters
+        ymm -- y coord in millimeters
+        chipName = like R:2,2 S:1,1
+        """
+        x0, y0 = self._chip_center_mm(chipName)
+
+        chip = self._chip_data[chipName]
+        dp = 0.001*chip['p_size']
+        xpix0 = chip['n_x']/2
+        ypix0 = chip['n_y']/2
+
+        rotMat = self._chip_rot_matrix(chipName)
+
+        x_pix_vec = np.array([1.0, 0.0])
+        y_pix_vec = np.array([0.0, 1.0])
+        x_pix_vec = np.dot(rotMat, x_pix_vec)
+        y_pix_vec = np.dot(rotMat, y_pix_vec)
+
+        d_mm_vec = np.array([xmm-x0, ymm-y0])
+
+        dx = np.dot(x_pix_vec, d_mm_vec)
+        dy = np.dot(y_pix_vec, d_mm_vec)
+
+        xpix = xpix0 + dx/dp
+        ypix = ypix0 + dy/dp
+
+        return xpix, ypix
 
 
 if __name__ == "__main__":
