@@ -10,7 +10,6 @@ from lsst.sims.coordUtils import focalPlaneCoordsFromPupilCoords
 from lsst.sims.coordUtils import pupilCoordsFromFocalPlaneCoords
 from lsst.sims.utils import Site
 from lsst.afw.cameraGeom import SCIENCE
-from lsst.sims.GalSimInterface import LSSTCameraWrapper
 from lsst.sims.utils.CodeUtilities import _validate_inputs
 from lsst.sims.utils import arcsecFromRadians
 import palpy
@@ -143,15 +142,15 @@ if __name__ == "__main__":
     coord_converter = PhoSimPixelTransformer()
     camera = lsst_camera()
     rng = np.random.RandomState(213)
-    det_list = []
+    det_name_list = []
     for det in camera:
         if det.getType() != SCIENCE:
             continue
-        det_list.append(det.getName())
+        det_name_list.append(det.getName())
 
 
     n_test = 20
-    test_name_list = rng.choice(det_list, size=n_test, replace=True)
+    test_name_list = rng.choice(det_name_list, size=n_test, replace=True)
     xpix_list = rng.random_sample(n_test)*4000.0
     ypix_list = rng.random_sample(n_test)*4000.0
     for xpix, ypix, test_name in zip(xpix_list, ypix_list, test_name_list):
@@ -161,22 +160,9 @@ if __name__ == "__main__":
         dd = np.sqrt((xpix-xpix1)**2+(ypix-ypix1)**2)
         assert dd<1.0e-10
 
-    exit(1)
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
-    parser.add_argument('--chip', type=str, default=None,
-                        help="like R22S11")
     args = parser.parse_args()
-
-    if args.chip is None:
-        raise RuntimeError("Must specify chip")
-
-    chip_name = args.chip[0]+':'+args.chip[1]+','+args.chip[2]
-    chip_name += ' '
-    chip_name += args.chip[3]+':'+args.chip[4]+','+args.chip[5]
-
-    mangled_name = chip_name.replace(':','').replace(',','').replace(' ','_')
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
                            'Development', 'garage', 'OpSimData',
@@ -193,36 +179,32 @@ if __name__ == "__main__":
     assert np.abs(obs.site.pressure)<1.0e-6
     assert np.abs(obs.site.humidity)<1.0e-6
 
-    x_pix_arr = np.arange(100.0, 3900.0, 200.0)
-    y_pix_arr = np.arange(100.0, 3900.0, 200.0)
+    x_pix_arr = np.arange(700.0, 3301.0, 700.0)
+    y_pix_arr = np.arange(700.0, 3301.0, 700.0)
     pix_grid = np.meshgrid(x_pix_arr, y_pix_arr)
     x_pix_arr = pix_grid[0].flatten()
     y_pix_arr = pix_grid[1].flatten()
 
-    id_grid = np.arange(len(x_pix_arr)+1).astype(int)
     x_mm = []
     y_mm = []
-    for xx, yy in zip(x_pix_arr, y_pix_arr):
-        xm, ym = coord_converter.mmFromPix(xx, yy, chip_name)
-        x_mm.append(xm)
-        y_mm.append(ym)
 
-    chip_data = coord_converter._chip_data[chip_name]
-    x_mm.append(chip_data['x']*0.001+chip_data['dx'])
-    y_mm.append(chip_data['y']*0.001+chip_data['dy'])
+    det_name_list.sort()
+    for det_name in det_name_list:
+        for xpix, ypix in zip(x_pix_arr, y_pix_arr):
+            xmm, ymm = coord_converter.mmFromPix(xpix, ypix, det_name)
+            x_mm.append(xmm)
+            y_mm.append(ymm)
+
     x_mm = np.array(x_mm)
     y_mm = np.array(y_mm)
+    id_grid = np.arange(len(x_mm)).astype(int)+1
 
     x_pup_arr, y_pup_arr = pupilCoordsFromFocalPlaneCoords(x_mm, y_mm, camera=lsst_camera())
-
-    camera_wrapper = LSSTCameraWrapper()
 
     ra_rad, dec_rad = _rawObservedFromPupilCoords(x_pup_arr, y_pup_arr,
                                                   obs._pointingRA,
                                                   obs._pointingDec,
                                                   obs._rotSkyPos)
-
-    id_grid = np.arange(len(ra_rad))
 
     ra_grid = np.degrees(ra_rad)
     dec_grid = np.degrees(dec_rad)
@@ -234,23 +216,16 @@ if __name__ == "__main__":
     phosim_header_map['nsnap'] = 1
     phosim_header_map['vistime'] =30.0
 
-    with open('raw_catalogs/star_cross_%d_%s.txt' % (args.obs, mangled_name), 'w') as out_file:
+    with open('catalogs/star_grid_%d.txt' % (args.obs), 'w') as out_file:
         write_phoSim_header(obs, out_file, phosim_header_map)
         for (i_obj, ra, dec) in zip(id_grid, ra_grid, dec_grid):
             out_file.write('object %d ' % (i_obj))
             out_file.write('%.17f %.17f ' % (ra, dec))
             out_file.write('21.0 starSED/kurucz/km10_5750.fits_g10_5750.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
-        #out_file.write('object 25 ')
-        #out_file.write('%.17f %.17f ' % (obs.pointingRA, obs.pointingDec))
-        #out_file.write('19.0 starSED/kurucz/km10_5750.fits_g10_5750.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
-
-    with open('raw_catalogs/star_cross_predicted_%d_%s.txt' % (args.obs, mangled_name), 'w') as out_file:
+    with open('catalogs/star_predicted_%d.txt' % (args.obs), 'w') as out_file:
         out_file.write('# id xpup ypup\n')
-        for ii in range(len(x_pix_arr)):
-            out_file.write('%d %.17f %.17f %e %e\n' %
+        for ii in range(len(x_mm)):
+            out_file.write('%d %.17e %.17e\n' %
                            (id_grid[ii],
-                            x_pix_arr[ii],
-                            y_pix_arr[ii],
                             x_mm[ii], y_mm[ii]))
-        #out_file.write('25 R22S11 %.17f %.17f\n' % (x_pix_c, y_pix_c))
