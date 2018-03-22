@@ -4,14 +4,9 @@ import numpy as np
 from lsst.sims.catUtils.utils import ObservationMetaDataGenerator
 from lsst.sims.catUtils.exampleCatalogDefinitions import DefaultPhoSimHeaderMap
 from lsst.sims.catUtils.exampleCatalogDefinitions import write_phoSim_header
-from lsst.sims.catUtils.mixins import PhoSimAstrometryStars
-from lsst.sims.utils import _observedFromICRS
 from lsst.sims.coordUtils import lsst_camera
-from lsst.sims.coordUtils import raDecFromPixelCoords
-from lsst.sims.coordUtils import pixelCoordsFromRaDecLSST
 from lsst.sims.coordUtils import focalPlaneCoordsFromPupilCoords
 from lsst.sims.coordUtils import pupilCoordsFromFocalPlaneCoords
-from lsst.sims.coordUtils import chipNameFromPupilCoordsLSST
 from lsst.sims.utils import Site
 from lsst.afw.cameraGeom import SCIENCE
 from lsst.sims.GalSimInterface import LSSTCameraWrapper
