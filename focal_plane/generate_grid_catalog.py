@@ -141,6 +141,27 @@ def _rawObservedFromPupilCoords(xPupil, yPupil, ra0, dec0, rotSkyPos):
 if __name__ == "__main__":
 
     coord_converter = PhoSimPixelTransformer()
+    camera = lsst_camera()
+    rng = np.random.RandomState(213)
+    det_list = []
+    for det in camera:
+        if det.getType() != SCIENCE:
+            continue
+        det_list.append(det.getName())
+
+
+    n_test = 20
+    test_name_list = rng.choice(det_list, size=n_test, replace=True)
+    xpix_list = rng.random_sample(n_test)*4000.0
+    ypix_list = rng.random_sample(n_test)*4000.0
+    for xpix, ypix, test_name in zip(xpix_list, ypix_list, test_name_list):
+
+        xmm, ymm = coord_converter.mmFromPix(xpix, ypix, test_name)
+        xpix1, ypix1 = coord_converter.pixFromMM(xmm, ymm, test_name)
+        dd = np.sqrt((xpix-xpix1)**2+(ypix-ypix1)**2)
+        assert dd<1.0e-10
+
+    exit(1)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
@@ -172,7 +193,6 @@ if __name__ == "__main__":
     assert np.abs(obs.site.pressure)<1.0e-6
     assert np.abs(obs.site.humidity)<1.0e-6
 
-    camera = lsst_camera()
     x_pix_arr = np.arange(100.0, 3900.0, 200.0)
     y_pix_arr = np.arange(100.0, 3900.0, 200.0)
     pix_grid = np.meshgrid(x_pix_arr, y_pix_arr)
@@ -194,7 +214,7 @@ if __name__ == "__main__":
     y_mm = np.array(y_mm)
 
     x_pup_arr, y_pup_arr = pupilCoordsFromFocalPlaneCoords(x_mm, y_mm, camera=lsst_camera())
-    
+
     camera_wrapper = LSSTCameraWrapper()
 
     ra_rad, dec_rad = _rawObservedFromPupilCoords(x_pup_arr, y_pup_arr,
