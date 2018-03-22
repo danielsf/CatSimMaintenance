@@ -203,9 +203,17 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
+    parser.add_argument('--chip', type=str, default=None,
+                        help="like R22S11")
     args = parser.parse_args()
 
-    chip_name = 'R:2,2 S:1,1'
+    if args.chip is None:
+        raise RuntimeError("Must specify chip")
+
+    chip_name = args.chip[0]+':'+args.chip[1]+','+args.chip[2]
+    chip_name += ' '
+    chip_name += args.chip[3]+':'+args.chip[4]+','+args.chip[5]
+
     mangled_name = chip_name.replace(':','').replace(',','').replace(' ','_')
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
