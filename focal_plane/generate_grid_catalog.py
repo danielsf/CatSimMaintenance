@@ -162,6 +162,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
+    parser.add_argument('--out_dir', type=str, default='catalogs')
     args = parser.parse_args()
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
@@ -216,14 +217,14 @@ if __name__ == "__main__":
     phosim_header_map['nsnap'] = 1
     phosim_header_map['vistime'] =30.0
 
-    with open('catalogs/star_grid_%d.txt' % (args.obs), 'w') as out_file:
+    with open(os.path.join(args.out_dir,'star_grid_%d.txt' % (args.obs)), 'w') as out_file:
         write_phoSim_header(obs, out_file, phosim_header_map)
         for (i_obj, ra, dec) in zip(id_grid, ra_grid, dec_grid):
             out_file.write('object %d ' % (i_obj))
             out_file.write('%.17f %.17f ' % (ra, dec))
             out_file.write('21.0 starSED/kurucz/km10_5750.fits_g10_5750.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
-    with open('catalogs/star_predicted_%d.txt' % (args.obs), 'w') as out_file:
+    with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (args.obs)), 'w') as out_file:
         out_file.write('# id xmm ymm\n')
         for ii in range(len(x_mm)):
             out_file.write('%d %.17e %.17e\n' %
