@@ -163,6 +163,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
     parser.add_argument('--out_dir', type=str, default='catalogs')
+    parser.add_argument('--chip', type=str, default=None)
     args = parser.parse_args()
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
@@ -191,6 +192,8 @@ if __name__ == "__main__":
 
     det_name_list.sort()
     for det_name in det_name_list:
+        if args.chip is not None and args.chip != det_name:
+            continue
         for xpix, ypix in zip(x_pix_arr, y_pix_arr):
             xmm, ymm = coord_converter.mmFromPix(xpix, ypix, det_name)
             x_mm.append(xmm)
