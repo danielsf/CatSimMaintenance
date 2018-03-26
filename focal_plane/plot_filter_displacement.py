@@ -104,11 +104,13 @@ for i_filter in range(6):
     plt.figsize=(300, 300)
     dx = position_dict[i_filter]['xmm'] - position_dict[2]['xmm']
     dy = position_dict[i_filter]['ymm'] - position_dict[2]['ymm']
+    dd = np.sqrt(dx**2+dy**2)
     plt.quiver(position_dict[2]['xmm'], position_dict[2]['ymm'],
                dx, dy)
 
     plt.xlabel('xmm (r filter)')
     plt.ylabel('ymm (r filter)')
+    plt.title('min %.2e median %.2e max %.2e' % (dd.min(), np.median(dd), dd.max()))
 
     plt.savefig(os.path.join(args.out_dir, 'r_to_%s_mm.eps' % filt_name))
     plt.close()
