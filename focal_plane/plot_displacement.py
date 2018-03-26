@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--obs', type=int, default=None)
 parser.add_argument('--phosim_dir', type=str, default='phosim_output')
 parser.add_argument('--out_dir', type=str, default='figs')
+parser.add_argument('--catsim_dir', type=str, default='catalogs')
 args = parser.parse_args()
 if args.obs is None:
     raise RuntimeError("must specify obs")
@@ -81,7 +82,7 @@ phosim_ymm = np.array(phosim_ymm)
 
 catsim_dtype = np.dtype([('id', int), ('xmm', float), ('ymm', float)])
 
-catsim_file = 'catalogs/star_predicted_%d.txt' % args.obs
+catsim_file = os.path.join(args.catsim_dir, 'star_predicted_%d.txt' % args.obs)
 if not os.path.exists(catsim_file):
     raise RuntimeError('%s does not exist' % catsim_file)
 
