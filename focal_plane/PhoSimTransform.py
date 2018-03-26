@@ -4,7 +4,7 @@ import os
 __all__ = ["PhoSimPixelTransformer"]
 
 
-def load_focal_plane():
+def load_focal_plane(perturbed=True):
     phosim_dir = os.path.join("/Users/danielsf/physics/phosim_release")
     phosim_file = os.path.join(phosim_dir, "data", "lsst", "focalplanelayout.txt")
 
@@ -23,11 +23,18 @@ def load_focal_plane():
             local_dict['p_size'] = float(params[3])
             local_dict['n_x'] = int(params[4])
             local_dict['n_y'] = int(params[5])
-            local_dict['rot'] = float(params[10])
+            if perturbed:
+                local_dict['rot'] = float(params[10])
+            else:
+                local_dict['rot'] = 0.0
             assert np.abs(float(params[11]))<1.0e-10
             assert np.abs(float(params[12]))<1.0e-10
-            local_dict['dx'] = float(params[13])
-            local_dict['dy'] = float(params[14])
+            if perturbed:
+                local_dict['dx'] = float(params[13])
+                local_dict['dy'] = float(params[14])
+            else:
+                local_dict['dx'] = 0.0
+                local_dict['dy'] = 0.0
             assert np.abs(float(params[15]))<1.0e-10
             chip_data[name] = local_dict
 
@@ -36,8 +43,8 @@ def load_focal_plane():
 
 class PhoSimPixelTransformer(object):
 
-    def __init__(self):
-        self._chip_data = load_focal_plane()
+    def __init__(self, perturbed=True):
+        self._chip_data = load_focal_plane(perturbed=perturbed)
 
     def _chip_center_mm(self, chipName):
         chip= self._chip_data[chipName]

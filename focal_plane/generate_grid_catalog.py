@@ -144,7 +144,15 @@ if __name__ == "__main__":
     parser.add_argument('--obs', type=int, default=230)
     parser.add_argument('--out_dir', type=str, default='catalogs')
     parser.add_argument('--chip', type=str, default=None)
+    parser.add_argument('--perturbed', type=str, default='True')
     args = parser.parse_args()
+
+    if args.perturbed.lower()[0] == 't':
+        coordinate_converter = PhoSimPixelTransformer(perturbed=True)
+    elif args.perturbed.lower()[0]=='f':
+        coordinate_converter = PhoSimPixelTransformer(perturbed=False)
+    else:
+        raise RuntimeError('Do not know how to handle perturbed=%s' % args.perturbed)
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
                            'Development', 'garage', 'OpSimData',
