@@ -137,8 +137,10 @@ for i_filter in range(6):
         plt.figsize=(300, 300)
         dx = x_f-x_r
         dy = y_f-y_r
+        dd = np.sqrt(dx**2+dy**2)
         plt.quiver(x_r, y_r, dx, dy)
         plt.xlabel('x pixels')
         plt.ylabel('y pixels')
+        plt.title('min %.2e med %.2e max %.2e' % (dd.min(), np.median(dd), dd.max()))
         plt.savefig(os.path.join(args.out_dir, 'r_to_%s_%s_pix.eps' % (filt_name,mangled_name)))
         plt.close()
