@@ -105,7 +105,7 @@ for i_filter in range(6):
     dx = position_dict[i_filter]['xmm'] - position_dict[2]['xmm']
     dy = position_dict[i_filter]['ymm'] - position_dict[2]['ymm']
     plt.quiver(position_dict[2]['xmm'], position_dict[2]['ymm'],
-               dx, dx)
+               dx, dy)
 
     plt.xlabel('xmm (r filter)')
     plt.ylabel('ymm (r filter)')
