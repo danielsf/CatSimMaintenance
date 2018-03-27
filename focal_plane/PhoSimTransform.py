@@ -77,8 +77,8 @@ class PhoSimPixelTransformer(object):
         y_pix_vec = np.dot(rotMat, y_pix_vec)
 
         mm_vec = np.array([x0, y0])
-        mm_vec += (xpix-chip['n_x']/2)*dp*x_pix_vec
-        mm_vec += (ypix-chip['n_y']/2)*dp*y_pix_vec
+        mm_vec += (xpix-0.5-chip['n_x']/2)*dp*x_pix_vec
+        mm_vec += (ypix+0.5-chip['n_y']/2)*dp*y_pix_vec
 
         return mm_vec[0], mm_vec[1]
 
@@ -92,8 +92,8 @@ class PhoSimPixelTransformer(object):
 
         chip = self._chip_data[chipName]
         dp = 0.001*chip['p_size']
-        xpix0 = chip['n_x']/2
-        ypix0 = chip['n_y']/2
+        xpix0 = 0.5+chip['n_x']/2
+        ypix0 = -0.5+chip['n_y']/2
 
         rotMat = self._chip_rot_matrix(chipName)
 
