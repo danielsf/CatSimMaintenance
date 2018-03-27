@@ -148,9 +148,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.perturbed.lower()[0] == 't':
-        coordinate_converter = PhoSimPixelTransformer(perturbed=True)
+        coord_converter = PhoSimPixelTransformer(perturbed=True)
     elif args.perturbed.lower()[0]=='f':
-        coordinate_converter = PhoSimPixelTransformer(perturbed=False)
+        coord_converter = PhoSimPixelTransformer(perturbed=False)
     else:
         raise RuntimeError('Do not know how to handle perturbed=%s' % args.perturbed)
 
@@ -177,6 +177,12 @@ if __name__ == "__main__":
 
     x_mm = []
     y_mm = []
+
+    camera = lsst_camera()
+    det_name_list = []
+    for det in camera:
+        if det.getType() == SCIENCE:
+            det_name_list.append(det.getName())
 
     det_name_list.sort()
     for det_name in det_name_list:
