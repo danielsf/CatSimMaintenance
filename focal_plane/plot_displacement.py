@@ -17,6 +17,8 @@ parser.add_argument('--obs', type=int, default=None)
 parser.add_argument('--phosim_dir', type=str, default='phosim_output')
 parser.add_argument('--out_dir', type=str, default='figs')
 parser.add_argument('--catsim_dir', type=str, default='catalogs')
+parser.add_argument('--chip', type=str, default=None)
+parser.add_argument('--perturbed', type=str, default='true')
 args = parser.parse_args()
 if args.obs is None:
     raise RuntimeError("must specify obs")
@@ -35,10 +37,13 @@ for file_name in phosim_file_list:
 
 camera = lsst_camera()
 det_name_list = []
-for det in camera:
-    if det.getType() != SCIENCE:
-        continue
-    det_name_list.append(det.getName())
+if args.chip is None:
+    for det in camera:
+        if det.getType() != SCIENCE:
+            continue
+        det_name_list.append(det.getName())
+else:
+    det_name_list = [args.chip]
 
 phosim_dtype = np.dtype([('id', int), ('phot', int),
                          ('x', float), ('y', float)])
@@ -69,7 +74,11 @@ for det_name in det_name_list:
 
     chip_grid += [det_name]*len(local_data)
 
-coordinate_converter = PhoSimPixelTransformer()
+if args.perturbed.lower()[0] == 't':
+    coordinate_converter = PhoSimPixelTransformer(True)
+else:
+    coordinate_converter = PhoSimPixelTransformer(False)
+
 phosim_xmm = []
 phosim_ymm = []
 for name, xx, yy in zip(chip_grid, phosim_x, phosim_y):
@@ -111,6 +120,8 @@ print('dd %e %e %e' % (dd.min(),np.median(dd),dd.max()))
 
 plt.figsize = (30,30)
 plt.quiver(catsim_xmm, catsim_ymm, dx, dy)
+plt.title('min %.2e med %.2e max %.2e' %
+          (dd.min(), np.median(dd), dd.max()))
 plt.savefig(os.path.join(out_dir,'catsim_to_phosim_%d.png') % args.obs)
 
 dist_arr = np.sqrt(catsim_xmm**2+catsim_ymm**2)
