@@ -225,7 +225,7 @@ if __name__ == "__main__":
         for (i_obj, ra, dec) in zip(id_grid, ra_grid, dec_grid):
             out_file.write('object %d ' % (i_obj))
             out_file.write('%.17f %.17f ' % (ra, dec))
-            out_file.write('21.0 starSED/kurucz/km10_5750.fits_g10_5750.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
+            out_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
     with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (args.obs)), 'w') as out_file:
         out_file.write('# id xmm ymm xpix ypix\n')
