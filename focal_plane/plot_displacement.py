@@ -89,7 +89,8 @@ for name, xx, yy in zip(chip_grid, phosim_x, phosim_y):
 phosim_xmm = np.array(phosim_xmm)
 phosim_ymm = np.array(phosim_ymm)
 
-catsim_dtype = np.dtype([('id', int), ('xmm', float), ('ymm', float)])
+catsim_dtype = np.dtype([('id', int), ('xmm', float), ('ymm', float),
+                         ('xpix', float), ('ypix', float)])
 
 catsim_file = os.path.join(args.catsim_dir, 'star_predicted_%d.txt' % args.obs)
 if not os.path.exists(catsim_file):

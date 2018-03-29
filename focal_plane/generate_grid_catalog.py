@@ -177,6 +177,8 @@ if __name__ == "__main__":
 
     x_mm = []
     y_mm = []
+    x_pix = []
+    y_pix = []
 
     camera = lsst_camera()
     det_name_list = []
@@ -192,9 +194,13 @@ if __name__ == "__main__":
             xmm, ymm = coord_converter.mmFromPix(xpix, ypix, det_name)
             x_mm.append(xmm)
             y_mm.append(ymm)
+            x_pix.append(xpix)
+            y_pix.append(ypix)
 
     x_mm = np.array(x_mm)
     y_mm = np.array(y_mm)
+    x_pix = np.array(x_pix)
+    y_pix = np.array(y_pix)
     id_grid = np.arange(len(x_mm)).astype(int)+1
 
     x_pup_arr, y_pup_arr = pupilCoordsFromFocalPlaneCoords(x_mm, y_mm, camera=lsst_camera())
@@ -222,8 +228,9 @@ if __name__ == "__main__":
             out_file.write('21.0 starSED/kurucz/km10_5750.fits_g10_5750.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
     with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (args.obs)), 'w') as out_file:
-        out_file.write('# id xmm ymm\n')
+        out_file.write('# id xmm ymm xpix ypix\n')
         for ii in range(len(x_mm)):
-            out_file.write('%d %.17e %.17e\n' %
+            out_file.write('%d %.17e %.17e %.6f %.6f\n' %
                            (id_grid[ii],
-                            x_mm[ii], y_mm[ii]))
+                            x_mm[ii], y_mm[ii],
+                            x_pix[ii], y_pix[ii]))
