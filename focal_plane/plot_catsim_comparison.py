@@ -98,6 +98,9 @@ if __name__ == "__main__":
     plt.figsize=(30,30)
     dx = x_focal_deprecessed-x_focal_catsim
     dy = y_focal_deprecessed-y_focal_catsim
+    dd = np.sqrt(dx**2+dy**2)
     plt.quiver(x_focal_catsim, y_focal_catsim,
                dx, dy)
+    plt.title('min %.2e med %.2e max %.2e' % (dd.min(), np.median(dd), dd.max()))
     plt.savefig('catsim_v_deprecessed_%d.eps' % args.obs)
+    print('dd %e %e %e\n' % (dd.min(), np.median(dd), dd.max()))
