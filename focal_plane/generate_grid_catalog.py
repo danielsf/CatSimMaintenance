@@ -12,9 +12,7 @@ from lsst.sims.coordUtils import focalPlaneCoordsFromPupilCoords
 from lsst.sims.coordUtils import pupilCoordsFromFocalPlaneCoords
 from lsst.sims.utils import Site
 from lsst.afw.cameraGeom import SCIENCE
-from lsst.sims.utils.CodeUtilities import _validate_inputs
 from lsst.sims.utils import arcsecFromRadians
-import palpy
 
 import argparse
 
