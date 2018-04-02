@@ -1,3 +1,24 @@
+"""
+This script generates InstanceCatalogs meant for comparison between
+the naive interpretation of focalplanelayout.txt and where PhoSim
+actually puts photons (i.e. for determining the optical model to go
+in obs_lsstSim).
+
+These catalogs should be run through PhoSim with
+
+clearclouds
+backgroundmode 0
+cameraconfig 7
+opticsonlymode 1
+centroidfile 1
+rotationjitter 0.0
+elevationjitter 0.0
+azimuthjitter 0.0
+perturbationmode 1
+
+to get agreement with PhoSim
+"""
+
 import os
 import copy
 import numpy as np
