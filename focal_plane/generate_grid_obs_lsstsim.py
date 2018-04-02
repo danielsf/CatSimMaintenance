@@ -20,14 +20,21 @@ from lsst.sims.utils import observedFromICRS
 from lsst.sims.utils import Site
 from lsst.sims.GalSimInterface import LSSTCameraWrapper
 
+from lsst.afw.cameraGeom import SCIENCE
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
-    parser.add_argument('--chip', type=str, default='R:2,2 S:1,1')
     args = parser.parse_args()
 
-    chip_m = args.chip.replace(':','').replace(',','').replace(' ','_')
+    camera = lsst_camera()
+    det_name_list = []
+    for det in camera:
+        if det.getType() != SCIENCE:
+            continue
+        det_name_list.append(det.getName())
+    det_name_list.sort()
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
                            'Development', 'garage', 'OpSimData',
@@ -44,42 +51,54 @@ if __name__ == "__main__":
     assert np.abs(obs.site.pressure)<1.0e-6
     assert np.abs(obs.site.humidity)<1.0e-6
 
-    xpix_in = np.arange(200.0, 3800.0, 300.0)
-    ypix_in = np.arange(200.0, 3800.0, 300.0)
-    pix_grid = np.meshgrid(xpix_in, ypix_in)
+    xpix_0 = np.arange(200.0, 3800.0, 200.0)
+    ypix_0 = np.arange(200.0, 3800.0, 200.0)
+    pix_grid = np.meshgrid(xpix_0, ypix_0)
     cam_xpix_in = pix_grid[0].flatten()
     cam_ypix_in = pix_grid[1].flatten()
 
     camera_wrapper = LSSTCameraWrapper()
-    xpix_in, ypix_in = camera_wrapper.dmPixFromCameraPix(cam_xpix_in,
-                                                         cam_ypix_in,
-                                                         args.chip)
-
-    ra_icrs, dec_icrs = raDecFromPixelCoords(xpix_in, ypix_in, args.chip,
-                                             camera=lsst_camera(),
-                                             obs_metadata=obs)
-
-    ra_obs, dec_obs = observedFromICRS(ra_icrs, dec_icrs, obs_metadata=obs,
-                                       epoch=2000.0, includeRefraction=False)
 
     de_precessor = PhoSimAstrometryBase()
-    (ra_deprecessed,
-     dec_deprecessed) = de_precessor._dePrecess(np.radians(ra_obs),
-                                                np.radians(dec_obs),
-                                                obs)
-
     phosim_header_map = copy.deepcopy(DefaultPhoSimHeaderMap)
     phosim_header_map['nsnap'] = 1
     phosim_header_map['exptime'] = 30.0
 
-    with open('full_catalogs/test_cat_%s_%d.txt' % (chip_m, args.obs), 'w') as out_file:
-        write_phoSim_header(obs, out_file, phosim_header_map)
-        for i_obj, (ra, dec) in enumerate(zip(ra_deprecessed, dec_deprecessed)):
-            out_file.write('object %d ' % (i_obj+1))
-            out_file.write('%.17f %.17f ' % (np.degrees(ra), np.degrees(dec)))
-            out_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
+    i_obj = 0
 
-    with open('full_catalogs/input_pix_%s_%d.txt' % (chip_m,args.obs), 'w') as out_file:
-        out_file.write('# i_obj x_cam y_cam\n')
-        for i_obj, (xx, yy) in enumerate(zip(cam_xpix_in, cam_ypix_in)):
-            out_file.write('%d %e %e\n' % (i_obj+1, xx, yy))
+    with open('full_catalogs/star_grid_%d.txt' % (args.obs), 'w') as cat_file:
+        write_phoSim_header(obs, cat_file, phosim_header_map)
+        with open('full_catalogs/star_predicted_%d.txt' % (args.obs), 'w') as truth_file:
+            truth_file.write('# i_obj x_cam y_cam chip_name ra_icrs dec_icra x_dm y_dm\n')
+
+            for det_name in det_name_list:
+                det_name_m = det_name.replace(':','').replace(',','').replace(' ','_')
+
+
+                dm_xpix_in, dm_ypix_in = camera_wrapper.dmPixFromCameraPix(cam_xpix_in,
+                                                                           cam_ypix_in,
+                                                                           det_name)
+
+                ra_icrs, dec_icrs = raDecFromPixelCoords(dm_xpix_in, dm_ypix_in, det_name,
+                                                         camera=lsst_camera(),
+                                                         obs_metadata=obs)
+
+                ra_obs, dec_obs = observedFromICRS(ra_icrs, dec_icrs, obs_metadata=obs,
+                                                   epoch=2000.0, includeRefraction=False)
+
+                (ra_deprecessed,
+                 dec_deprecessed) = de_precessor._dePrecess(np.radians(ra_obs),
+                                                            np.radians(dec_obs),
+                                                            obs)
+
+                for ra, dec, xx, yy, r_icrs, d_icrs, dmxx, dmyy in \
+                zip(ra_deprecessed, dec_deprecessed, cam_xpix_in, cam_ypix_in, ra_icrs, dec_icrs,
+                    dm_xpix_in, dm_ypix_in):
+
+                    i_obj += 1
+                    cat_file.write('object %d ' % (i_obj))
+                    cat_file.write('%.17f %.17f ' % (np.degrees(ra), np.degrees(dec)))
+                    cat_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
+
+                    truth_file.write('%d %e %e %s %.17f %.17f %e %e\n' %
+                    (i_obj, xx, yy, det_name_m, r_icrs, d_icrs, dmxx, dmyy))
