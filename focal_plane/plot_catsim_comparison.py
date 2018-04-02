@@ -56,8 +56,8 @@ if __name__ == "__main__":
     transformer = PhoSimPixelTransformer(perturbed=True)
     phosim_mixin = PhoSimAstrometryBase()
 
-    ra_icrs = np.arange(obs.pointingRA-0.15, obs.pointingRA+0.15, 0.02)
-    dec_icrs = np.arange(obs.pointingDec-0.15, obs.pointingDec+0.15, 0.02)
+    ra_icrs = np.arange(obs.pointingRA-2.0, obs.pointingRA+2.0, 0.05)
+    dec_icrs = np.arange(obs.pointingDec-2.0, obs.pointingDec+2.0, 0.05)
 
     coord_grid = np.meshgrid(ra_icrs, dec_icrs)
     ra_icrs = coord_grid[0].flatten()
