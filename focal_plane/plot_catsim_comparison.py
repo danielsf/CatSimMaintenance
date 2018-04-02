@@ -1,3 +1,9 @@
+"""
+This script generates a quiver plot comparing CatSim predicted
+pixel position for ICRS with CatSim predicted pixel position
+for deprecessed coordinates.
+"""
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
