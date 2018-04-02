@@ -19,6 +19,7 @@ from lsst.sims.catUtils.exampleCatalogDefinitions import write_phoSim_header
 from lsst.sims.utils import observedFromICRS
 from lsst.sims.utils import Site
 from lsst.sims.GalSimInterface import LSSTCameraWrapper
+from lsst.sims.coordUtils import focalPlaneCoordsFromRaDec
 
 from lsst.afw.cameraGeom import SCIENCE
 
@@ -51,8 +52,8 @@ if __name__ == "__main__":
     assert np.abs(obs.site.pressure)<1.0e-6
     assert np.abs(obs.site.humidity)<1.0e-6
 
-    xpix_0 = np.arange(200.0, 3800.0, 200.0)
-    ypix_0 = np.arange(200.0, 3800.0, 200.0)
+    xpix_0 = np.arange(200.0, 3800.0, 1000.0)
+    ypix_0 = np.arange(200.0, 3800.0, 1000.0)
     pix_grid = np.meshgrid(xpix_0, ypix_0)
     cam_xpix_in = pix_grid[0].flatten()
     cam_ypix_in = pix_grid[1].flatten()
@@ -69,7 +70,7 @@ if __name__ == "__main__":
     with open('full_catalogs/star_grid_%d.txt' % (args.obs), 'w') as cat_file:
         write_phoSim_header(obs, cat_file, phosim_header_map)
         with open('full_catalogs/star_predicted_%d.txt' % (args.obs), 'w') as truth_file:
-            truth_file.write('# i_obj x_cam y_cam chip_name ra_icrs dec_icra x_dm y_dm\n')
+            truth_file.write('# i_obj ra_icrs dec_icrs ra_deprecessed dec_deprecessed x_dm y_dm x_f y_f x_cam y_cam\n')
 
             for det_name in det_name_list:
                 det_name_m = det_name.replace(':','').replace(',','').replace(' ','_')
@@ -91,14 +92,22 @@ if __name__ == "__main__":
                                                             np.radians(dec_obs),
                                                             obs)
 
-                for ra, dec, xx, yy, r_icrs, d_icrs, dmxx, dmyy in \
+                x_f, y_f = focalPlaneCoordsFromRaDec(ra_icrs, dec_icrs, obs_metadata=obs,
+                                                     camera=lsst_camera())
+
+                for ra, dec, camxx, camyy, r_icrs, d_icrs, dmxx, dmyy, xxf, yyf in \
                 zip(ra_deprecessed, dec_deprecessed, cam_xpix_in, cam_ypix_in, ra_icrs, dec_icrs,
-                    dm_xpix_in, dm_ypix_in):
+                    dm_xpix_in, dm_ypix_in, x_f, y_f):
 
                     i_obj += 1
                     cat_file.write('object %d ' % (i_obj))
                     cat_file.write('%.17f %.17f ' % (np.degrees(ra), np.degrees(dec)))
                     cat_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
-                    truth_file.write('%d %e %e %s %.17f %.17f %e %e\n' %
-                    (i_obj, xx, yy, det_name_m, r_icrs, d_icrs, dmxx, dmyy))
+                    truth_file.write('%d %.10f %.10f %.10f %.10f %.2f %.2f %.6f %.6f %.5f %.5f\n' %
+                    (i_obj, r_icrs, ra, dec, d_icrs, dmxx, dmyy, xxf, yyf, camxx, camyy))
+
+    print('ra %.17f' % obs.pointingRA)
+    print('dec %.17f' % obs.pointingDec)
+    print('rotSky %.17f' % obs.rotSkyPos)
+    print('mjd %.17f' % obs.mjd.TAI)
