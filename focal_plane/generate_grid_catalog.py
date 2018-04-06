@@ -62,6 +62,7 @@ if __name__ == "__main__":
     obs_gen = ObservationMetaDataGenerator(database=opsimdb)
     obs_list = obs_gen.getObservationMetaData(obsHistID=args.obs)
     obs = obs_list[0]
+    filter_name= obs.bandpass
     site_no_atm = Site(name="LSST",
                        pressure=0.0,
                        humidity=0.0)
@@ -120,14 +121,14 @@ if __name__ == "__main__":
     phosim_header_map['nsnap'] = 1
     phosim_header_map['vistime'] =30.0
 
-    with open(os.path.join(args.out_dir,'star_grid_%d.txt' % (args.obs)), 'w') as out_file:
+    with open(os.path.join(args.out_dir,'star_grid_%s_%d.txt' % (filter_name, args.obs)), 'w') as out_file:
         write_phoSim_header(obs, out_file, phosim_header_map)
         for (i_obj, ra, dec) in zip(id_grid, ra_grid, dec_grid):
             out_file.write('object %d ' % (i_obj))
             out_file.write('%.17f %.17f ' % (ra, dec))
             out_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
-    with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (args.obs)), 'w') as out_file:
+    with open(os.path.join(args.out_dir, 'star_predicted_%s_%d.txt' % (filter_name, args.obs)), 'w') as out_file:
         out_file.write('# id xmm ymm xpix ypix\n')
         for ii in range(len(x_mm)):
             out_file.write('%d %.17e %.17e %.6f %.6f\n' %

@@ -45,6 +45,7 @@ if __name__ == "__main__":
     obs_gen = ObservationMetaDataGenerator(database=opsimdb)
     obs_list = obs_gen.getObservationMetaData(obsHistID=args.obs)
     obs = obs_list[0]
+    filter_name = obs.bandpass
     site_no_atm = Site(name="LSST",
                        pressure=0.0,
                        humidity=0.0)
@@ -67,9 +68,9 @@ if __name__ == "__main__":
 
     i_obj = 0
 
-    with open('full_catalogs/star_grid_%d.txt' % (args.obs), 'w') as cat_file:
+    with open('full_catalogs/star_grid_%d_%s.txt' % (args.obs, filter_name), 'w') as cat_file:
         write_phoSim_header(obs, cat_file, phosim_header_map)
-        with open('full_catalogs/star_predicted_%d.txt' % (args.obs), 'w') as truth_file:
+        with open('full_catalogs/star_predicted_%d_%s.txt' % (args.obs, filter_name), 'w') as truth_file:
             truth_file.write('# i_obj ra_icrs dec_icrs ra_deprecessed dec_deprecessed x_dm y_dm x_f y_f x_cam y_cam\n')
 
             for det_name in det_name_list:
