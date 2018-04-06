@@ -105,7 +105,8 @@ if __name__ == "__main__":
                     cat_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
                     truth_file.write('%d %.10f %.10f %.10f %.10f %.2f %.2f %.6f %.6f %.5f %.5f\n' %
-                    (i_obj, r_icrs, ra, dec, d_icrs, dmxx, dmyy, xxf, yyf, camxx, camyy))
+                    (i_obj, r_icrs, d_icrs, np.degrees(ra), np.degrees(dec),
+                    dmxx, dmyy, xxf, yyf, camxx, camyy))
 
     print('ra %.17f' % obs.pointingRA)
     print('dec %.17f' % obs.pointingDec)
