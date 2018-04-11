@@ -125,7 +125,7 @@ plt.figsize = (30,30)
 plt.quiver(catsim_xmm, catsim_ymm, dx, dy)
 plt.title('min %.2e med %.2e max %.2e' %
           (dd.min(), np.median(dd), dd.max()))
-plt.savefig(os.path.join(out_dir,'catsim_to_phosim_%d.eps') % args.obs)
+plt.savefig(os.path.join(out_dir,'catsim_to_phosim_%d.png') % args.obs)
 
 dist_arr = np.sqrt(catsim_xmm**2+catsim_ymm**2)
 disp_arr = np.sqrt(dx**2+dy**2)
