@@ -118,9 +118,10 @@ if __name__ == "__main__":
             out_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
     with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (name_to_num[filter_name])), 'w') as out_file:
-        out_file.write('# id xmm ymm xpix ypix\n')
+        out_file.write('# id xmm ymm xpup ypup\n')
         for ii in range(len(x_mm)):
-            out_file.write('%d %.17e %.17e -1 -1\n' %
+            out_file.write('%d %.17e %.17e %.17e %.17e\n' %
                            (id_grid[ii],
-                            x_mm[ii], y_mm[ii]))
+                            x_mm[ii], y_mm[ii],
+                            x_pup[ii], y_pup[ii]))
 
