@@ -10,8 +10,11 @@ import lsst.afw.geom as afwGeom
 from lsst.sims.GalSimInterface import LSSTCameraWrapper
 from lsst.sims.utils import ZernikePolynomialGenerator
 
+from lsst.sims.coordUtils import LsstZernikeFitter
+
 import time
 
+z_fitter = LsstZernikeFitter()
 camera = LsstSimMapper().camera
 camera_wrapper = LSSTCameraWrapper()
 
@@ -137,5 +140,12 @@ for i_filter in range(6):
     print('old: %e %e %e %e' % (disp_sorted[n//4],
                                 disp_sorted[n//2], disp_sorted[3*n//4],
                                 disp_sorted[-1]))
+
+    dx_catsim, dy_catsim = z_fitter.dxdy(catsim_data['xmm'],
+                                         catsim_data['ymm'],
+                                         i_filter)
+
+    np.testing.assert_array_equal(dx_catsim, dx_fit)
+    np.testing.assert_array_equal(dy_catsim, dy_fit)
 
 print('non camera took %.2e ' % (time.time()-t_start))
