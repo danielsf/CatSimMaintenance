@@ -10,7 +10,7 @@ phosim_dir = os.path.join('/Users', 'danielsf', 'physics',
                           'phosim_sfd')
 
 # directory where the centroid files are
-centroid_dir = os.path.join(phosim_dir, 'catsim_validation', 'm16')
+centroid_dir = os.path.join(phosim_dir, 'catsim_validation', 'hacked_filters')
 
 
 phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
@@ -18,8 +18,7 @@ phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', fl
 phot_params = PhotometricParameters(nexp=1, exptime=30.0)
 
 spec = Sed()
-sed_name = os.path.join('/Users', 'danielsf', 'physics',
-                        'phosim_release', 'data', 'SEDs',
+sed_name = os.path.join(phosim_dir, 'data', 'SEDs',
                         'flatSED', 'sed_flat_short.txt.gz')
 
 spec.readSED_flambda(sed_name)
@@ -27,7 +26,7 @@ spec.readSED_flambda(sed_name)
 imsim_bp = Bandpass()
 imsim_bp.imsimBandpass()
 
-fnorm = spec.calcFluxNorm(16.0, imsim_bp)
+fnorm = spec.calcFluxNorm(21.0, imsim_bp)
 spec.multiplyFluxNorm(fnorm)
 
 bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
@@ -41,7 +40,7 @@ det = os.path.join(bp_dir, 'detector.dat')
 atmos = os.path.join(bp_dir, 'atmos_std.dat')
 
 optics_bp = Bandpass()
-optics_bp.readThroughputList(componentList=[m1, m2, m3, l1, l2, l3, det, atmos])
+optics_bp.readThroughputList(componentList=[m1, m2, m3, l1, l2, l3])
 
 phosim_bp_dtype = np.dtype([('angle', float), ('wav_micron', float), ('transmission', float),
                             ('reflection', float)])
