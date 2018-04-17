@@ -71,6 +71,8 @@ if __name__ == "__main__":
     atmos_file = args.atm
     bp_dir = args.bp_dir
 
+    throughput_dtype = np.dtype([('wav_nm', float), ('throughput', float)])
+    sed_dtype = np.dtype([('wav_nm', float), ('flambda', float)])
 
     phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
 
@@ -100,6 +102,12 @@ if __name__ == "__main__":
         print('adding astmosphere')
         componentList.append(atmos_file)
 
+    np_component_list = []
+    for file_name in componentList:
+        print('multiplying %s' % file_name)
+        data = np.genfromtxt(file_name, dtype=throughput_dtype)
+        np_component_list.append(data)
+
     optics_bp = Bandpass()
     optics_bp.readThroughputList(componentList=componentList)
 
@@ -111,28 +119,38 @@ if __name__ == "__main__":
 
         phosim_truth = np.median(phosim_data['phot'])
 
+        np_filter = np.genfromtxt(os.path.join(bp_dir, 'filter_%s.dat' % bp_name),
+                                  dtype=throughput_dtype)
+
+        for np_component in np_component_list:
+            interped_throughput = np.interp(np_filter['wav_nm'],
+                                            np_component['wav_nm'],
+                                            np_component['throughput'])
+
+            np_filter['throughput'] *= interped_throughput
+
         filter_bp = Bandpass()
         filter_bp.readThroughput(os.path.join(bp_dir, 'filter_%s.dat' % bp_name))
 
         wav, sb = optics_bp.multiplyThroughputs(filter_bp.wavelen, filter_bp.sb)
         bp = Bandpass(wavelen=wav, sb=sb)
 
-        wav, flambda = spec.resampleSED(wavelen=spec.wavelen,
-                                        flux=spec.flambda,
-                                        wavelen_match=bp.wavelen)
+        flambda = np.interp(np_filter['wav_nm'], spec.wavelen, spec.flambda)
 
         phys_params = PhysicalParameters()
 
-        phot = flambda*wav/(phys_params.planck*phys_params.lightspeed*1.0e9)
+        phot = flambda*np_filter['wav_nm']/(phys_params.planck*phys_params.lightspeed*1.0e9)
 
-        dlambda = wav[1]-wav[0]
+        integral = 0.5*((phot[1:]*np_filter['throughput'][1:]+phot[:-1]*np_filter['throughput'][:-1])
+                        *(np_filter['wav_nm'][1:]-np_filter['wav_nm'][:-1])).sum()
 
-        integral = 0.5*((phot[1:]*bp.sb[1:]+phot[:-1]*bp.sb[:-1])*(wav[1:]-wav[:-1])).sum()
         integral *= phot_params.effarea*phot_params.exptime*phot_params.nexp
 
         print('\n%s' % bp_name)
-        print('catsim_counts %e' % integral)
+        print('np_counts %e' % integral)
         adu = spec.calcADU(bp, phot_params)
-        assert np.abs(adu*phot_params.gain-integral) < 0.01*integral
+        print('catsim_counts %e' % (adu*phot_params.gain))
+        if bp_name != 'y':
+            assert np.abs(adu*phot_params.gain-integral) < 0.01*integral
         print('phosim_counts %e' % phosim_truth)
         print('catsim_counts/phosim_counts %e' % (integral/phosim_truth))
