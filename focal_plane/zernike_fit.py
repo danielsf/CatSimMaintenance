@@ -145,7 +145,7 @@ for i_filter in range(6):
                                          catsim_data['ymm'],
                                          i_filter)
 
-    np.testing.assert_array_equal(dx_catsim, dx_fit)
-    np.testing.assert_array_equal(dy_catsim, dy_fit)
+    np.testing.assert_array_almost_equal(dx_catsim, dx_fit, decimal=10)
+    np.testing.assert_array_almost_equal(dy_catsim, dy_fit, decimal=10)
 
 print('non camera took %.2e ' % (time.time()-t_start))
