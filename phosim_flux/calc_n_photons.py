@@ -92,11 +92,13 @@ if __name__ == "__main__":
                         default=os.path.join(catsim_bp_dir, 'lens3.dat'))
 
     parser.add_argument('--det', type=str,
-                        help='File to use for detector throughput (defaults to CatSim file)',
+                        help='File to use for detector throughput (defaults to CatSim file)'
+                        'Set to "None" to turn off the detector',
                         default=os.path.join(catsim_bp_dir, 'detector.dat'))
 
     parser.add_argument('--atm', type=str,
-                        help='File to use for atmosphere throughput (defaults to airmass=1.2)',
+                        help='File to use for atmosphere throughput (defaults to airmass=1.2)'
+                        'Set to "None" to turn off the atmosphere',
                         default=os.path.join(catsim_bp_dir, 'atmos_std.dat'))
 
     parser.add_argument('--bp_dir', type=str,
