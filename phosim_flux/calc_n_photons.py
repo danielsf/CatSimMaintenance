@@ -2,10 +2,47 @@ import os
 import numpy as np
 from lsst.utils import getPackageDir
 from lsst.sims.photUtils import Bandpass, Sed
-from lsst.sims.photUtils import PhysicalParameters
 from lsst.sims.photUtils import PhotometricParameters
 
 import argparse
+
+class PhysicalParameters(object):
+    """
+    A class to store physical constants and other immutable parameters
+    used by the sims_photUtils code
+    """
+
+    def __init__(self):
+        self.lightspeed = 299792458.0      # speed of light, = 2.9979e8 m/s
+        self.planck = 6.626068e-27        # planck's constant, = 6.626068e-27 ergs*seconds
+        self.nm2m = 1.00e-9               # nanometers to meters conversion = 1e-9 m/nm
+        self.ergsetc2jansky = 1.00e23     # erg/cm2/s/Hz to Jansky units (fnu)
+
+
+def get_sed_normalization(mag, sed_wav, sed_flambda):
+    imsim_wav = np.arange(200.0, 700.0, 1.0)
+    imsim_sb = np.zeros(len(imsim_wav))
+    imsim_sb[300] = 1.0
+    phi_integrand = imsim_sb/imsim_wav
+    integral = 0.5*((phi_integrand[1:]+phi_integrand[:-1])
+                    *(imsim_wav[1:]-imsim_wav[:-1])).sum()
+
+    imsim_phi = phi_integrand/integral
+
+    phys_params = PhysicalParameters()
+    sed_fnu = sed_flambda*sed_wav*sed_wav
+    sed_fnu *= phys_params.nm2m/phys_params.lightspeed
+    sed_fnu *= phys_params.ergsetc2jansky
+
+    sed_fnu = np.interp(imsim_wav, sed_wav, sed_fnu)
+
+    current_flux = 0.5*((sed_fnu[1:]*imsim_phi[1:]+sed_fnu[:-1]*imsim_phi[:-1])
+                        *(imsim_wav[1:]-imsim_wav[:-1])).sum()
+
+    current_mag = -2.5*np.log10(current_flux) + 2.5*np.log10(3631)
+    dmag = mag-current_mag
+    fnorm = np.power(10.0, -0.4*dmag)
+    return fnorm
 
 if __name__ == "__main__":
 
@@ -84,6 +121,10 @@ if __name__ == "__main__":
 
     spec.readSED_flambda(sed_name)
 
+    np_sed = np.genfromtxt(sed_name, dtype=sed_dtype)
+    np_fnorm = get_sed_normalization(21.0, np_sed['wav_nm'], np_sed['flambda'])
+    np_sed['flambda'] *= np_fnorm
+
     imsim_bp = Bandpass()
     imsim_bp.imsimBandpass()
 
@@ -111,6 +152,7 @@ if __name__ == "__main__":
     optics_bp = Bandpass()
     optics_bp.readThroughputList(componentList=componentList)
 
+
     for i_filter, bp_name in enumerate('ugrizy'):
 
         phosim_data = np.genfromtxt(os.path.join(centroid_dir,
@@ -129,13 +171,14 @@ if __name__ == "__main__":
 
             np_filter['throughput'] *= interped_throughput
 
+
         filter_bp = Bandpass()
         filter_bp.readThroughput(os.path.join(bp_dir, 'filter_%s.dat' % bp_name))
 
         wav, sb = optics_bp.multiplyThroughputs(filter_bp.wavelen, filter_bp.sb)
         bp = Bandpass(wavelen=wav, sb=sb)
 
-        flambda = np.interp(np_filter['wav_nm'], spec.wavelen, spec.flambda)
+        flambda = np.interp(np_filter['wav_nm'], np_sed['wav_nm'], np_sed['flambda'])
 
         phys_params = PhysicalParameters()
 
