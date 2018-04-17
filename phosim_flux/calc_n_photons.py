@@ -71,6 +71,7 @@ if __name__ == "__main__":
     atmos_file = args.atm
     bp_dir = args.bp_dir
 
+
     phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
 
     phot_params = PhotometricParameters(nexp=1, exptime=30.0)
@@ -101,9 +102,6 @@ if __name__ == "__main__":
 
     optics_bp = Bandpass()
     optics_bp.readThroughputList(componentList=componentList)
-
-    phosim_bp_dtype = np.dtype([('angle', float), ('wav_micron', float), ('transmission', float),
-                                ('reflection', float)])
 
     for i_filter, bp_name in enumerate('ugrizy'):
 
