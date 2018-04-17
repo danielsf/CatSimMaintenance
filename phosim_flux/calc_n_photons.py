@@ -10,7 +10,7 @@ phosim_dir = os.path.join('/Users', 'danielsf', 'physics',
                           'phosim_sfd')
 
 # directory where the centroid files are
-centroid_dir = os.path.join(phosim_dir, 'catsim_validation', 'hacked_filters')
+centroid_dir = os.path.join(phosim_dir, 'catsim_validation', 'hacked')
 
 
 phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
@@ -30,12 +30,12 @@ fnorm = spec.calcFluxNorm(21.0, imsim_bp)
 spec.multiplyFluxNorm(fnorm)
 
 bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
-m1 = os.path.join(bp_dir, 'm1.dat')
-m2 = os.path.join(bp_dir, 'm2.dat')
-m3 = os.path.join(bp_dir, 'm3.dat')
-l1 = os.path.join(bp_dir, 'lens1.dat')
-l2 = os.path.join(bp_dir, 'lens2.dat')
-l3 = os.path.join(bp_dir, 'lens3.dat')
+m1 = os.path.join('hacked_throughputs', 'm1.dat')
+m2 = os.path.join('hacked_throughputs', 'm2.dat')
+m3 = os.path.join('hacked_throughputs', 'm3.dat')
+l1 = os.path.join('hacked_throughputs', 'lens1.dat')
+l2 = os.path.join('hacked_throughputs', 'lens2.dat')
+l3 = os.path.join('hacked_throughputs', 'lens3.dat')
 det = os.path.join(bp_dir, 'detector.dat')
 atmos = os.path.join(bp_dir, 'atmos_std.dat')
 
