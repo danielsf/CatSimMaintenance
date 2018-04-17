@@ -118,9 +118,9 @@ if __name__ == "__main__":
 
     throughput_dtype = np.dtype([('wav_nm', float), ('throughput', float)])
     sed_dtype = np.dtype([('wav_nm', float), ('flambda', float)])
-
     phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
 
+    # read in and normalize the SED
     sed_name = os.path.join(phosim_dir, 'data', 'SEDs',
                             'flatSED', 'sed_flat_short.txt.gz')
 
@@ -137,6 +137,7 @@ if __name__ == "__main__":
         fnorm = spec.calcFluxNorm(21.0, imsim_bp)
         spec.multiplyFluxNorm(fnorm)
 
+    # read in the throughputs for the mirrors, lenses, detector and atmosphere
     componentList = [m1_file, m2_file, m3_file, l1_file, l2_file, l3_file]
     if det_file.lower() != 'none':
         print('adding detector')
@@ -157,12 +158,15 @@ if __name__ == "__main__":
 
     for i_filter, bp_name in enumerate('ugrizy'):
 
+        # read in the centroid files
         phosim_data = np.genfromtxt(os.path.join(centroid_dir,
                                                  'centroid_lsst_e_230_f%d_R22_S11_E000.txt' % i_filter),
                                     dtype=phosim_ct_dtype, skip_header=1)
 
         phosim_truth = np.median(phosim_data['phot'])
 
+        # read in the filter throughput and multiply the existing throughputs
+        # by that curve
         np_filter = np.genfromtxt(os.path.join(bp_dir, 'filter_%s.dat' % bp_name),
                                   dtype=throughput_dtype)
 
@@ -182,6 +186,7 @@ if __name__ == "__main__":
             bp = Bandpass(wavelen=wav, sb=sb)
 
 
+        # integrate the SED over the total system throughput
         flambda = np.interp(np_filter['wav_nm'], np_sed['wav_nm'], np_sed['flambda'])
         phys_params = PhysicalParameters()
         phot = flambda*np_filter['wav_nm']/(phys_params.planck*phys_params.lightspeed*1.0e9)
@@ -195,6 +200,7 @@ if __name__ == "__main__":
 
         integral *= effarea*exptime*nexp
 
+        # print results
         print('\n%s' % bp_name)
         print('catsim_counts (by hand) %e' % integral)
 
