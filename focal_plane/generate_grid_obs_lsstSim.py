@@ -29,8 +29,13 @@ if __name__ == "__main__":
     parser.add_argument('--obs', type=int, default=230)
     parser.add_argument('--out_dir', type=str, default='catalogs')
     parser.add_argument('--chip', type=str, default=None)
+    parser.add_argument('--random', type=str, default='False')
 
     args = parser.parse_args()
+    if args.random.lower()[0] == 't':
+        rng = np.random.RandomState(9912312)
+    else:
+        rng = None
 
     opsimdb = os.path.join('/Users', 'danielsf', 'physics', 'lsst_150412',
                            'Development', 'garage', 'OpSimData',
@@ -47,6 +52,7 @@ if __name__ == "__main__":
     obs.site=site_no_atm
     assert np.abs(obs.site.pressure)<1.0e-6
     assert np.abs(obs.site.humidity)<1.0e-6
+    print('pointing ',obs.pointingRA,obs.pointingDec)
 
     camera = LsstSimMapper().camera
 
@@ -81,7 +87,11 @@ if __name__ == "__main__":
     for dn in det_name_list:
         detector = camera[dn]
         pixels_to_focal = detector.getTransform(PIXELS, FOCAL_PLANE)
-        
+
+        if rng is not None:
+            x_pix_arr = rng.random_sample(25)*3500.0 + 300.0
+            y_pix_arr = rng.random_sample(25)*3500.0 + 300.0
+
         for ii in range(len(x_pix_arr)):
             focal = pixels_to_focal.applyForward(afwGeom.Point2D(x_pix_arr[ii],
                                                                  y_pix_arr[ii]))
@@ -96,16 +106,16 @@ if __name__ == "__main__":
 
     x_pup = np.array(x_pup)
     y_pup = np.array(y_pup)
-    
+
     ra, dec = _rawObservedFromPupilCoords(x_pup, y_pup,
                                           obs._pointingRA, obs._pointingDec,
                                           obs._rotSkyPos)
 
     ra_grid = np.degrees(ra)
     dec_grid = np.degrees(dec)
-        
+
     name_to_num ={'u':0, 'g':1, 'r':2, 'i':3, 'z':4, 'y':5}
-    
+
     phosim_header_map = copy.deepcopy(DefaultPhoSimHeaderMap)
     phosim_header_map['rawSeeing'] = ('rawSeeing', None)
     phosim_header_map['FWHMeff'] = ('FWHMeff', None)
