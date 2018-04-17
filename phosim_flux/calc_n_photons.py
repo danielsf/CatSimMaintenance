@@ -9,12 +9,67 @@ import argparse
 
 if __name__ == "__main__":
 
-    # directory where PhoSim lives
-    phosim_dir = os.path.join('/Users', 'danielsf', 'physics',
-                              'phosim_sfd')
+    parser = argparse.ArgumentParser()
 
-    # directory where the centroid files are
-    centroid_dir = os.path.join(phosim_dir, 'catsim_validation', 'hacked')
+    catsim_bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
+
+    parser.add_argument('--phosim_dir', type=str,
+                        help='Home directory for PhoSim',
+                        default=os.path.join('/Users', 'danielsf', 'physics',
+                                             'phosim_sfd'))
+
+    parser.add_argument('--centroid_dir', type=str,
+                        help='Directory under phosim_dir where centroid files are',
+                        default = os.path.join('catsim_validation', 'hacked_filters'))
+
+    parser.add_argument('--m1', type=str,
+                        help='File to use for m1 reflectivity',
+                        default=os.path.join(catsim_bp_dir, 'm1.dat'))
+
+    parser.add_argument('--m2', type=str,
+                        help='File to use for m2 reflectivity',
+                        default=os.path.join(catsim_bp_dir, 'm2.dat'))
+
+    parser.add_argument('--m3', type=str,
+                        help='File to use for m3 reflectivity',
+                        default=os.path.join(catsim_bp_dir, 'm3.dat'))
+
+    parser.add_argument('--lens1', type=str,
+                        help='File to use for lens1 transmission',
+                        default=os.path.join(catsim_bp_dir, 'lens1.dat'))
+
+    parser.add_argument('--lens2', type=str,
+                        help='File to use for lens2 transmission',
+                        default=os.path.join(catsim_bp_dir, 'lens2.dat'))
+
+    parser.add_argument('--lens3', type=str,
+                        help='File to use for lens3 transmission',
+                        default=os.path.join(catsim_bp_dir, 'lens3.dat'))
+
+    parser.add_argument('--det', type=str,
+                        help='File to use for detector throughput (defaults to CatSim file)',
+                        default=os.path.join(catsim_bp_dir, 'detector.dat'))
+
+    parser.add_argument('--atm', type=str,
+                        help='File to use for atmosphere throughput (defaults to airmass=1.2)',
+                        default=os.path.join(catsim_bp_dir, 'atmos_std.dat'))
+
+    parser.add_argument('--bp_dir', type=str,
+                        help='Directory to search for filter_*.dat files',
+                        default = catsim_bp_dir)
+
+    args = parser.parse_args()
+    phosim_dir = args.phosim_dir
+    centroid_dir = os.path.join(phosim_dir, args.centroid_dir)
+    m1_file = args.m1
+    m2_file = args.m2
+    m3_file = args.m3
+    l1_file = args.lens1
+    l2_file = args.lens2
+    l3_file = args.lens3
+    det_file = args.det
+    atmos_file = args.atm
+    bp_dir = args.bp_dir
 
     phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
 
@@ -33,17 +88,19 @@ if __name__ == "__main__":
     spec.multiplyFluxNorm(fnorm)
 
     bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
-    m1 = os.path.join('hacked_throughputs', 'm1.dat')
-    m2 = os.path.join('hacked_throughputs', 'm2.dat')
-    m3 = os.path.join('hacked_throughputs', 'm3.dat')
-    l1 = os.path.join('hacked_throughputs', 'lens1.dat')
-    l2 = os.path.join('hacked_throughputs', 'lens2.dat')
-    l3 = os.path.join('hacked_throughputs', 'lens3.dat')
     det = os.path.join(bp_dir, 'detector.dat')
     atmos = os.path.join(bp_dir, 'atmos_std.dat')
 
+    componentList = [m1_file, m2_file, m3_file, l1_file, l2_file, l3_file]
+    if det_file.lower() != 'none':
+        print('adding detector')
+        componentList.append(det_file)
+    if atmos_file.lower() != 'none':
+        print('adding astmosphere')
+        componentList.append(atmos_file)
+
     optics_bp = Bandpass()
-    optics_bp.readThroughputList(componentList=[m1, m2, m3, l1, l2, l3])
+    optics_bp.readThroughputList(componentList=componentList)
 
     phosim_bp_dtype = np.dtype([('angle', float), ('wav_micron', float), ('transmission', float),
                                 ('reflection', float)])
@@ -58,7 +115,6 @@ if __name__ == "__main__":
 
         filter_bp = Bandpass()
         filter_bp.readThroughput(os.path.join(bp_dir, 'filter_%s.dat' % bp_name))
-    
 
         wav, sb = optics_bp.multiplyThroughputs(filter_bp.wavelen, filter_bp.sb)
         bp = Bandpass(wavelen=wav, sb=sb)
