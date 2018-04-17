@@ -28,6 +28,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--obs', type=int, default=230)
     parser.add_argument('--out_dir', type=str, default='catalogs')
+    parser.add_argument('--chip', type=str, default=None)
 
     args = parser.parse_args()
 
@@ -66,6 +67,9 @@ if __name__ == "__main__":
     for det in camera:
         if det.getType() != SCIENCE:
             continue
+        if args.chip is not None:
+            if det.getName() != args.chip:
+                continue
         det_name_list.append(det.getName())
 
     det_name_list.sort()
@@ -118,10 +122,13 @@ if __name__ == "__main__":
             out_file.write('21.0 flatSED/sed_flat_short.txt.gz 0 0 0 0 0 0 point none CCM 0.03380581 3.1\n')
 
     with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (name_to_num[filter_name])), 'w') as out_file:
+        out_file.write('# ra %.17e dec %.17e rotSkyPos %.17e MJD(TAI) %.17e\n' %
+                       (obs.pointingRA, obs.pointingDec, obs.rotSkyPos, obs.mjd.TAI))
         out_file.write('# id xmm ymm xpup ypup\n')
         for ii in range(len(x_mm)):
-            out_file.write('%d %.17e %.17e %.17e %.17e\n' %
+            out_file.write('%d %.17e %.17e %.17e %.17e %.17e %.17e\n' %
                            (id_grid[ii],
                             x_mm[ii], y_mm[ii],
-                            x_pup[ii], y_pup[ii]))
+                            x_pup[ii], y_pup[ii],
+                            ra_grid[ii], dec_grid[ii]))
 
