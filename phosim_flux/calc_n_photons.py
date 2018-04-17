@@ -1,8 +1,13 @@
 import os
 import numpy as np
-from lsst.utils import getPackageDir
-from lsst.sims.photUtils import Bandpass, Sed
-from lsst.sims.photUtils import PhotometricParameters
+
+_LSST_STACK_INSTALLED = True
+try:
+    from lsst.utils import getPackageDir
+    from lsst.sims.photUtils import Bandpass, Sed
+    from lsst.sims.photUtils import PhotometricParameters
+except ImportError:
+    _LSST_STACK_INSTALLED = False
 
 import argparse
 
@@ -48,7 +53,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    catsim_bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
+    try:
+        catsim_bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
+    except:
+        catsim_bp_dir = '.'
 
     parser.add_argument('--phosim_dir', type=str,
                         help='Home directory for PhoSim',
@@ -113,27 +121,21 @@ if __name__ == "__main__":
 
     phosim_ct_dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
 
-    phot_params = PhotometricParameters(nexp=1, exptime=30.0)
-
-    spec = Sed()
     sed_name = os.path.join(phosim_dir, 'data', 'SEDs',
                             'flatSED', 'sed_flat_short.txt.gz')
-
-    spec.readSED_flambda(sed_name)
 
     np_sed = np.genfromtxt(sed_name, dtype=sed_dtype)
     np_fnorm = get_sed_normalization(21.0, np_sed['wav_nm'], np_sed['flambda'])
     np_sed['flambda'] *= np_fnorm
 
-    imsim_bp = Bandpass()
-    imsim_bp.imsimBandpass()
-
-    fnorm = spec.calcFluxNorm(21.0, imsim_bp)
-    spec.multiplyFluxNorm(fnorm)
-
-    bp_dir = os.path.join(getPackageDir('throughputs'), 'imsim', 'goal')
-    det = os.path.join(bp_dir, 'detector.dat')
-    atmos = os.path.join(bp_dir, 'atmos_std.dat')
+    if _LSST_STACK_INSTALLED:
+        phot_params = PhotometricParameters(nexp=1, exptime=30.0)
+        spec = Sed()
+        spec.readSED_flambda(sed_name)
+        imsim_bp = Bandpass()
+        imsim_bp.imsimBandpass()
+        fnorm = spec.calcFluxNorm(21.0, imsim_bp)
+        spec.multiplyFluxNorm(fnorm)
 
     componentList = [m1_file, m2_file, m3_file, l1_file, l2_file, l3_file]
     if det_file.lower() != 'none':
@@ -149,9 +151,9 @@ if __name__ == "__main__":
         data = np.genfromtxt(file_name, dtype=throughput_dtype)
         np_component_list.append(data)
 
-    optics_bp = Bandpass()
-    optics_bp.readThroughputList(componentList=componentList)
-
+    if _LSST_STACK_INSTALLED:
+        optics_bp = Bandpass()
+        optics_bp.readThroughputList(componentList=componentList)
 
     for i_filter, bp_name in enumerate('ugrizy'):
 
@@ -172,28 +174,35 @@ if __name__ == "__main__":
             np_filter['throughput'] *= interped_throughput
 
 
-        filter_bp = Bandpass()
-        filter_bp.readThroughput(os.path.join(bp_dir, 'filter_%s.dat' % bp_name))
+        if _LSST_STACK_INSTALLED:
+            filter_bp = Bandpass()
+            filter_bp.readThroughput(os.path.join(bp_dir, 'filter_%s.dat' % bp_name))
 
-        wav, sb = optics_bp.multiplyThroughputs(filter_bp.wavelen, filter_bp.sb)
-        bp = Bandpass(wavelen=wav, sb=sb)
+            wav, sb = optics_bp.multiplyThroughputs(filter_bp.wavelen, filter_bp.sb)
+            bp = Bandpass(wavelen=wav, sb=sb)
+
 
         flambda = np.interp(np_filter['wav_nm'], np_sed['wav_nm'], np_sed['flambda'])
-
         phys_params = PhysicalParameters()
-
         phot = flambda*np_filter['wav_nm']/(phys_params.planck*phys_params.lightspeed*1.0e9)
 
         integral = 0.5*((phot[1:]*np_filter['throughput'][1:]+phot[:-1]*np_filter['throughput'][:-1])
                         *(np_filter['wav_nm'][1:]-np_filter['wav_nm'][:-1])).sum()
 
-        integral *= phot_params.effarea*phot_params.exptime*phot_params.nexp
+        effarea = np.pi*(6.423*100.0/2.0)**2
+        exptime = 30.0
+        nexp = 1.0
+
+        integral *= effarea*exptime*nexp
 
         print('\n%s' % bp_name)
-        print('np_counts %e' % integral)
-        adu = spec.calcADU(bp, phot_params)
-        print('catsim_counts %e' % (adu*phot_params.gain))
-        if bp_name != 'y':
-            assert np.abs(adu*phot_params.gain-integral) < 0.01*integral
+        print('catsim_counts (by hand) %e' % integral)
+
+        if _LSST_STACK_INSTALLED:
+            adu = spec.calcADU(bp, phot_params)
+            print('catsim_counts (with sims_photUtils) %e' % (adu*phot_params.gain))
+            if bp_name != 'y':
+                assert np.abs(adu*phot_params.gain-integral) < 0.01*integral
+
         print('phosim_counts %e' % phosim_truth)
         print('catsim_counts/phosim_counts %e' % (integral/phosim_truth))
