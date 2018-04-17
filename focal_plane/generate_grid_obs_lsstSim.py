@@ -124,7 +124,7 @@ if __name__ == "__main__":
     with open(os.path.join(args.out_dir, 'star_predicted_%d.txt' % (name_to_num[filter_name])), 'w') as out_file:
         out_file.write('# ra %.17e dec %.17e rotSkyPos %.17e MJD(TAI) %.17e\n' %
                        (obs.pointingRA, obs.pointingDec, obs.rotSkyPos, obs.mjd.TAI))
-        out_file.write('# id xmm ymm xpup ypup\n')
+        out_file.write('# id xmm ymm xpup ypup ra_obs dec_obs\n')
         for ii in range(len(x_mm)):
             out_file.write('%d %.17e %.17e %.17e %.17e %.17e %.17e\n' %
                            (id_grid[ii],
