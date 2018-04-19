@@ -56,8 +56,8 @@ if __name__ == "__main__":
 
     camera = LsstSimMapper().camera
 
-    x_pix_arr = np.arange(700.0, 3301.0, 700.0)
-    y_pix_arr = np.arange(700.0, 3301.0, 700.0)
+    x_pix_arr = np.arange(100.0, 3901.0, 380.0)
+    y_pix_arr = np.arange(100.0, 3901.0, 380.0)
     pix_grid = np.meshgrid(x_pix_arr, y_pix_arr)
     x_pix_arr = pix_grid[0].flatten()
     y_pix_arr = pix_grid[1].flatten()
