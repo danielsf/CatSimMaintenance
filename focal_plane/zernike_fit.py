@@ -23,7 +23,7 @@ t_start = time.time()
 z_gen = ZernikePolynomialGenerator()
 n_grid = []
 m_grid = []
-for n in range(4):
+for n in range(8):
     for m in range(-n, n+1, 2):
         n_grid.append(n)
         m_grid.append(m)
