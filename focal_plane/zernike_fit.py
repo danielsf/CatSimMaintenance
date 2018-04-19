@@ -123,9 +123,15 @@ for i_filter in range(6):
     abs_dy_sorted = np.sort(abs_dy)
     #print(abs_dy_sorted[0], abs_dy_sorted[n//4], abs_dy_sorted[n//2], abs_dy_sorted[3*n//4])
 
+
+    dx_catsim, dy_catsim = z_fitter.dxdy(catsim_data['xmm'],
+                                         catsim_data['ymm'],
+                                         i_filter)
+
+
     disp = np.sqrt(dx**2+dy**2)
-    new_x = catsim_data['xmm'] + dx_fit
-    new_y = catsim_data['ymm'] + dy_fit
+    new_x = catsim_data['xmm'] + dx_catsim
+    new_y = catsim_data['ymm'] + dy_catsim
     new_disp = np.sqrt((phosim_xmm-new_x)**2+(phosim_ymm-new_y)**2)
     
     disp_sorted = np.sort(disp)/0.01
@@ -141,11 +147,7 @@ for i_filter in range(6):
                                 disp_sorted[n//2], disp_sorted[3*n//4],
                                 disp_sorted[-1]))
 
-    dx_catsim, dy_catsim = z_fitter.dxdy(catsim_data['xmm'],
-                                         catsim_data['ymm'],
-                                         i_filter)
-
-    np.testing.assert_array_almost_equal(dx_catsim, dx_fit, decimal=10)
-    np.testing.assert_array_almost_equal(dy_catsim, dy_fit, decimal=10)
+    #np.testing.assert_array_almost_equal(dx_catsim, dx_fit, decimal=10)
+    #np.testing.assert_array_almost_equal(dy_catsim, dy_fit, decimal=10)
 
 print('non camera took %.2e ' % (time.time()-t_start))
