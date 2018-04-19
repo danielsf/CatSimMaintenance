@@ -29,8 +29,8 @@ for n in range(4):
         m_grid.append(m)
 
 fig_dir = os.path.join('learning', 'figs')
-catalog_dir = os.path.join('learning', 'catalogs')
-phosim_dir = os.path.join('learning', 'output')
+catalog_dir = os.path.join('learning', 'catalogs2')
+phosim_dir = os.path.join('learning', 'output2')
 prediction_cat = os.path.join(catalog_dir, 'star_predicted_2.txt')
 dtype = np.dtype([('id', int), ('xmm', float), ('ymm', float),
                   ('xpup', float), ('ypup', float),
