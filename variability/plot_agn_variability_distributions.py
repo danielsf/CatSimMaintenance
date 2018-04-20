@@ -41,8 +41,8 @@ def plot_color_mesh(xx, yy, dx, dy, vmin=None, vmax=None):
     if i_x_arr.min()<0 or i_y_arr.min()<0:
         raise RuntimeError('negative dex')
 
-    x_mesh=np.arange(xx.min(),xx.max()+0.1,dx)
-    y_mesh=np.arange(yy.min(),yy.max()+0.1,dy)
+    x_mesh=np.arange(xx.min(),xx.max()+dx,dx)
+    y_mesh=np.arange(yy.min(),yy.max()+dy,dy)
     x_mesh,y_mesh = np.meshgrid(x_mesh,y_mesh,indexing='xy')
     z_mesh = np.zeros(shape=x_mesh.shape, dtype=int)
     ct_1000b = 0
@@ -56,7 +56,6 @@ def plot_color_mesh(xx, yy, dx, dy, vmin=None, vmax=None):
     plt.pcolormesh(x_mesh,y_mesh,z_mesh, vmin=vmin, vmax=vmax)
                    #norm=matplotlib.colors.LogNorm(vmin=1.0,
                    #                               vmax=1.2e6))
-    plt.colorbar(label='sources per pixel')
 
     ct_1000 = 0
     big_min = np.round((2.8-xx.min())/dx).astype(int)
@@ -77,12 +76,157 @@ if __name__ == "__main__":
     data = np.genfromtxt('agn_variability_distribution.txt',
                          dtype=dtype)
 
-    valid = np.where(data['redshift']<=4.0)
+    plt.figsize = (30,30)
     for i_band, band in enumerate('ugrizy'):
-        plt.figsize = (30,30)
+        plt.subplot(3,2,i_band+1)
+
+        valid = np.where(data['redshift']<=4.0)
+
         plot_color_mesh(data['redshift'][valid], data[band][valid], 0.05, 0.1)
-        plt.xlabel('redshift')
-        plt.ylabel('observed %s magnitude' % band)
-        plt.savefig('z_vs_mag_%s.png' % band)
-        plt.close()
-        
+        if i_band==0:
+            plt.xlabel('redshift', fontsize=7)
+
+        plt.ylabel('%s (obs)' % band, fontsize=7)
+        if i_band==0:
+            plt.colorbar(label='sources per pixel')
+
+        yticks = np.arange(np.floor(data[band].min()), np.ceil(data[band].max()),
+                           2)
+
+        ylabels = ['' if ii%2==0 else '%d' % yticks[ii]
+                   for ii in range(len(yticks))]
+
+        plt.yticks(yticks, ylabels)
+    plt.tight_layout()
+    plt.savefig('quiescent_mag_vs_redshift.png')
+    plt.close()
+
+    plt.figsize = (30,30)
+    for i_band, band in enumerate('ugrizy'):
+        sf_name = 'sf%s' % band
+        plt.subplot(3,2,i_band+1)
+
+        valid = np.where(data['redshift']<=4.0)
+
+        plot_color_mesh(data['redshift'][valid], data[sf_name][valid], 0.05, 0.05)
+        if i_band==0:
+            plt.xlabel('redshift', fontsize=7)
+
+        plt.ylabel('SF(%s)' % band, fontsize=7)
+        if i_band==0:
+            plt.colorbar(label='sources per pixel')
+
+        yticks = np.arange(np.floor(data[sf_name][valid].min()),
+                           np.ceil(data[sf_name][valid].max()),
+                           0.25)
+
+        ylabels = ['' if ii%3!=0 else '%.2f' % yticks[ii]
+                   for ii in range(len(yticks))]
+
+        plt.yticks(yticks, ylabels)
+    plt.tight_layout()
+    plt.savefig('structure_function_vs_redshift.png')
+    plt.close()
+
+    plt.figsize = (30,30)
+    plt.suptitle('redshift <= 4.0')
+    for i_band, band in enumerate('ugrizy'):
+        sf_name = 'sf%s' % band
+        plt.subplot(3,2,i_band+1)
+
+        valid = np.where(data['redshift']<=4.0)
+
+        plot_color_mesh(data[band][valid], data[sf_name][valid], 0.05, 0.05)
+        plt.xlabel('%s (obs)' % band, fontsize=7)
+
+        plt.ylabel('SF(%s)' % band, fontsize=7)
+        if i_band==0:
+            plt.colorbar(label='sources per pixel')
+
+        yticks = np.arange(np.floor(data[sf_name][valid].min()),
+                           np.ceil(data[sf_name][valid].max()),
+                           0.25)
+
+        ylabels = ['' if ii%3!=0 else '%.2f' % yticks[ii]
+                   for ii in range(len(yticks))]
+
+        plt.yticks(yticks, ylabels)
+    plt.tight_layout(rect=[0,0,1,0.95])
+    plt.savefig('structure_function_vs_quiescent_magnitude.png')
+    plt.close()
+
+    plt.figsize = (30,30)
+    plt.suptitle('redshift <= 4.0')
+    for i_band, band in enumerate('ugrizy'):
+        sf_name = 'sf%s' % band
+        plt.subplot(3,2,i_band+1)
+
+        valid = np.where(data['redshift']<=4.0)
+
+        tau_obs = np.log10(data['tau'][valid]/(1.0+data['redshift'][valid]))
+
+        plot_color_mesh(data[sf_name][valid],
+                        tau_obs,
+                        0.05, 0.1)
+
+        plt.xlabel('SF(%s)' % band, fontsize=7)
+        if i_band==0:
+            plt.colorbar(label='sources per pixel')
+            plt.ylabel('log10[tau (days)]', fontsize=7)
+
+        xticks = np.arange(np.floor(data[sf_name][valid].min()),
+                           np.ceil(data[sf_name][valid].max()),
+                           0.25)
+
+        xlabels = ['' if ii%3!=0 else '%.2f' % xticks[ii]
+                   for ii in range(len(xticks))]
+
+        plt.xticks(xticks, xlabels)
+
+        yticks = np.arange(0.0, 4.0, 0.25)
+        ylabels = ['' if ii%4!=0 else '%d' % yticks[ii]
+                   for ii in range(len(yticks))]
+        plt.yticks(yticks, ylabels)
+
+    plt.tight_layout(rect=[0,0,1,0.95])
+    plt.savefig('structure_function_vs_tau.png')
+    plt.close()
+
+    sf_name = None
+
+    plt.figsize = (30,30)
+    plt.suptitle('redshift <= 4.0')
+    for i_band, band in enumerate('ugrizy'):
+        plt.subplot(3,2,i_band+1)
+
+        valid = np.where(data['redshift']<=4.0)
+
+        tau_obs = np.log10(data['tau'][valid]/(1.0+data['redshift'][valid]))
+
+        plot_color_mesh(data[band][valid],
+                        tau_obs,
+                        0.05, 0.1)
+
+        plt.xlabel('%s (obs)' % band, fontsize=7)
+        if i_band==0:
+            plt.colorbar(label='sources per pixel')
+            plt.ylabel('log10[tau (days)]', fontsize=7)
+
+        xticks = np.arange(np.floor(data[band][valid].min()),
+                           np.ceil(data[band][valid].max()),
+                           1.0)
+
+        xlabels = ['' if ii%5!=0 else '%d' % xticks[ii]
+                   for ii in range(len(xticks))]
+
+        plt.xticks(xticks, xlabels)
+
+
+        yticks = np.arange(0.0, 4.0, 0.25)
+        ylabels = ['' if ii%4!=0 else '%d' % yticks[ii]
+                   for ii in range(len(yticks))]
+        plt.yticks(yticks, ylabels)
+
+    plt.tight_layout(rect=[0,0,1,0.95])
+    plt.savefig('tau_vs_quiescent_magnitude.png')
+    plt.close()
