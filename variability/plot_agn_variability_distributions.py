@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 
-from lsst.utils import getPackageDir
-from lsst.sims.photUtils import BandpassDict, Sed, Bandpass
-
 def make_2d_histogram(xx, yy, dx, dy):
     """
     returns indices and counts of unique points on the map
@@ -68,16 +65,10 @@ def plot_color_mesh(xx, yy, dx, dy, vmin=None, vmax=None):
 
 if __name__ == "__main__":
 
-    sed_file = os.path.join(getPackageDir('sims_sed_library'),
-                            'agnSED', 'agn.spec.gz')
-
-    raw_agn_sed = Sed()
-    raw_agn_sed.readSED_flambda(sed_file)
-    
-    imsim_bp = Bandpass()
-    imsim_bp.imsimBandpass()
-
-    dtype = np.dtype([('z', float), ('mag', float),
+    dtype = np.dtype([('redshift', float), ('u', float),
+                      ('g', float), ('r', float),
+                      ('i', float), ('z', float),
+                      ('y', float),
                       ('tau', float), ('sfu', float),
                       ('sfg', float), ('sfr', float),
                       ('sfi', float), ('sfz', float),
@@ -86,31 +77,10 @@ if __name__ == "__main__":
     data = np.genfromtxt('agn_variability_distribution.txt',
                          dtype=dtype)
 
-    bp_dict = BandpassDict.loadTotalBandpassesFromFiles()
-    obs_mag = {}
-    for band in 'ugrizy':
-        obs_mag[band] = np.zeros(len(data), dtype=float)
-    
-    with open('agn_z_vs_mag.txt', 'w') as out_file:
-        for ii in range(len(data)):
-            agn_sed = Sed(wavelen=raw_agn_sed.wavelen,
-                          flambda=raw_agn_sed.flambda)
-
-            fnorm = agn_sed.calcFluxNorm(data['mag'][ii], imsim_bp)
-            agn_sed.multiplyFluxNorm(fnorm)
-            agn_sed.redshiftSED(data['z'][ii], dimming=True)
-            mags = bp_dict.magListForSed(agn_sed)
-            out_file.write('%e %e %e %e %e %e %e\n' %
-            (data['z'][ii], mags[0], mags[1], mags[2],
-             mags[3], mags[4], mags[5]))
-
-            for i_band, band in enumerate('ugrizy'):
-                obs_mag[band][ii] = mags[i_band]
-
-    valid = np.where(data['z']<=4.0)
+    valid = np.where(data['redshift']<=4.0)
     for i_band, band in enumerate('ugrizy'):
         plt.figsize = (30,30)
-        plot_color_mesh(data['z'][valid], obs_mag[band][valid], 0.05, 0.1)
+        plot_color_mesh(data['redshift'][valid], data[band][valid], 0.05, 0.1)
         plt.xlabel('redshift')
         plt.ylabel('observed %s magnitude' % band)
         plt.savefig('z_vs_mag_%s.png' % band)
