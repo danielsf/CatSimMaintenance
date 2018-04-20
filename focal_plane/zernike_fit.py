@@ -29,8 +29,8 @@ for n in range(8):
         m_grid.append(m)
 
 fig_dir = os.path.join('learning', 'figs')
-catalog_dir = os.path.join('learning', 'catalogs2')
-phosim_dir = os.path.join('learning', 'output2')
+catalog_dir = os.path.join('learning', 'catalogs3')
+phosim_dir = os.path.join('learning', 'output3')
 prediction_cat = os.path.join(catalog_dir, 'star_predicted_2.txt')
 dtype = np.dtype([('id', int), ('xmm', float), ('ymm', float),
                   ('xpup', float), ('ypup', float),
@@ -54,6 +54,8 @@ catsim_y = catsim_data['ymm']/rr
 polynomials ={}
 for n, m in zip(n_grid, m_grid):
     values = z_gen.evaluate_xy(catsim_x, catsim_y, n, m)
+    for vv in values:
+        assert not np.isnan(vv)
     polynomials[(n,m)] = values
 
 poly_keys = list(polynomials.keys())
@@ -130,8 +132,8 @@ for i_filter in range(6):
 
 
     disp = np.sqrt(dx**2+dy**2)
-    new_x = catsim_data['xmm'] + dx_catsim
-    new_y = catsim_data['ymm'] + dy_catsim
+    new_x = catsim_data['xmm'] + dx_fit
+    new_y = catsim_data['ymm'] + dy_fit
     new_disp = np.sqrt((phosim_xmm-new_x)**2+(phosim_ymm-new_y)**2)
     
     disp_sorted = np.sort(disp)/0.01
