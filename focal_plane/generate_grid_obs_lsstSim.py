@@ -56,12 +56,6 @@ if __name__ == "__main__":
 
     camera = LsstSimMapper().camera
 
-    x_pix_arr = np.arange(100.0, 3901.0, 380.0)
-    y_pix_arr = np.arange(100.0, 3901.0, 380.0)
-    pix_grid = np.meshgrid(x_pix_arr, y_pix_arr)
-    x_pix_arr = pix_grid[0].flatten()
-    y_pix_arr = pix_grid[1].flatten()
-
     x_mm = []
     y_mm = []
     x_pup = []
@@ -87,10 +81,21 @@ if __name__ == "__main__":
     for dn in det_name_list:
         detector = camera[dn]
         pixels_to_focal = detector.getTransform(PIXELS, FOCAL_PLANE)
+        bbox = detector.getBBox()
+        xmin = bbox.getMinX()
+        xmax = bbox.getMaxX()
+        ymin = bbox.getMinY()
+        ymax = bbox.getMaxY()
 
         if rng is not None:
-            x_pix_arr = rng.random_sample(25)*3500.0 + 300.0
-            y_pix_arr = rng.random_sample(25)*3500.0 + 300.0
+            x_pix_arr = rng.random_sample(25)*(xmax-xmin-10.0) + 10.0
+            y_pix_arr = rng.random_sample(25)*(ymax-ymin-10.0) + 10.0
+        else:
+            x_pix_arr = np.arange(xmin+10.0, xmax-9.0, 0.25*(xmax-xmin-20.0))
+            y_pix_arr = np.arange(ymin+10.0, ymax-9.0, 0.25*(ymax-ymin-20.0))
+            mesh = np.meshgrid(x_pix_arr, y_pix_arr)
+            x_pix_arr = mesh[0].flatten()
+            y_pix_arr = mesh[1].flatten()
 
         for ii in range(len(x_pix_arr)):
             focal = pixels_to_focal.applyForward(afwGeom.Point2D(x_pix_arr[ii],
