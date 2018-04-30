@@ -132,8 +132,8 @@ for i_filter in range(6):
 
 
     disp = np.sqrt(dx**2+dy**2)
-    new_x = catsim_data['xmm'] + dx_fit
-    new_y = catsim_data['ymm'] + dy_fit
+    new_x = catsim_data['xmm'] + dx_catsim
+    new_y = catsim_data['ymm'] + dy_catsim
     new_disp = np.sqrt((phosim_xmm-new_x)**2+(phosim_ymm-new_y)**2)
     
     disp_sorted = np.sort(disp)/0.01
