@@ -64,6 +64,8 @@ def plot_color_mesh(xx, yy, dx, dy, vmin=None, vmax=None):
 
 if __name__ == "__main__":
 
+    max_redshift = 100.0
+
     dtype = np.dtype([('redshift', float), ('u', float),
                       ('g', float), ('r', float),
                       ('i', float), ('z', float),
@@ -80,7 +82,7 @@ if __name__ == "__main__":
     for i_band, band in enumerate('ugrizy'):
         plt.subplot(3,2,i_band+1)
 
-        valid = np.where(data['redshift']<=4.0)
+        valid = np.where(data['redshift']<=max_redshift)
 
         plot_color_mesh(data['redshift'][valid], data[band][valid], 0.05, 0.1)
         if i_band==0:
@@ -98,7 +100,7 @@ if __name__ == "__main__":
 
         plt.yticks(yticks, ylabels)
     plt.tight_layout()
-    plt.savefig('quiescent_mag_vs_redshift.png')
+    plt.savefig('quiescent_mag_vs_redshift_full_z.png')
     plt.close()
 
     plt.figsize = (30,30)
@@ -106,7 +108,7 @@ if __name__ == "__main__":
         sf_name = 'sf%s' % band
         plt.subplot(3,2,i_band+1)
 
-        valid = np.where(data['redshift']<=4.0)
+        valid = np.where(data['redshift']<=max_redshift)
 
         plot_color_mesh(data['redshift'][valid], data[sf_name][valid], 0.05, 0.05)
         if i_band==0:
@@ -125,16 +127,16 @@ if __name__ == "__main__":
 
         plt.yticks(yticks, ylabels)
     plt.tight_layout()
-    plt.savefig('structure_function_vs_redshift.png')
+    plt.savefig('structure_function_vs_redshift_full_z.png')
     plt.close()
 
     plt.figsize = (30,30)
-    plt.suptitle('redshift <= 4.0')
+    plt.suptitle('redshift <= %.1f' % max_redshift)
     for i_band, band in enumerate('ugrizy'):
         sf_name = 'sf%s' % band
         plt.subplot(3,2,i_band+1)
 
-        valid = np.where(data['redshift']<=4.0)
+        valid = np.where(data['redshift']<=max_redshift)
 
         plot_color_mesh(data[band][valid], data[sf_name][valid], 0.05, 0.05)
         plt.xlabel('%s (obs)' % band, fontsize=7)
@@ -152,16 +154,16 @@ if __name__ == "__main__":
 
         plt.yticks(yticks, ylabels)
     plt.tight_layout(rect=[0,0,1,0.95])
-    plt.savefig('structure_function_vs_quiescent_magnitude.png')
+    plt.savefig('structure_function_vs_quiescent_magnitude_full_z.png')
     plt.close()
 
     plt.figsize = (30,30)
-    plt.suptitle('redshift <= 4.0')
+    plt.suptitle('redshift <= %.1f' % max_redshift)
     for i_band, band in enumerate('ugrizy'):
         sf_name = 'sf%s' % band
         plt.subplot(3,2,i_band+1)
 
-        valid = np.where(data['redshift']<=4.0)
+        valid = np.where(data['redshift']<=max_redshift)
 
         tau_obs = np.log10(data['tau'][valid]/(1.0+data['redshift'][valid]))
 
@@ -189,17 +191,17 @@ if __name__ == "__main__":
         plt.yticks(yticks, ylabels)
 
     plt.tight_layout(rect=[0,0,1,0.95])
-    plt.savefig('structure_function_vs_tau.png')
+    plt.savefig('structure_function_vs_tau_full_z.png')
     plt.close()
 
     sf_name = None
 
     plt.figsize = (30,30)
-    plt.suptitle('redshift <= 4.0')
+    plt.suptitle('redshift <= %.1f' % max_redshift)
     for i_band, band in enumerate('ugrizy'):
         plt.subplot(3,2,i_band+1)
 
-        valid = np.where(data['redshift']<=4.0)
+        valid = np.where(data['redshift']<=max_redshift)
 
         tau_obs = np.log10(data['tau'][valid]/(1.0+data['redshift'][valid]))
 
@@ -228,5 +230,5 @@ if __name__ == "__main__":
         plt.yticks(yticks, ylabels)
 
     plt.tight_layout(rect=[0,0,1,0.95])
-    plt.savefig('tau_vs_quiescent_magnitude.png')
+    plt.savefig('tau_vs_quiescent_magnitude_full_z.png')
     plt.close()
