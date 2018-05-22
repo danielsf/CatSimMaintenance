@@ -100,14 +100,21 @@ sed_names = rng.choice(sed_candidates, size=len(ra), replace=True)
 
 for i_filter in [0]:
     out_name = os.path.join(out_dir, 'phosim_flux_cat_%d.txt' % i_filter)
+    ref_name = os.path.join(out_dir, 'phosim_ref_cat.txt')
     phosim_header['obshistid'] = i_filter
-    with open(out_name, 'w') as file_handle:
-        write_phoSim_header(obs, file_handle, phosim_header)
-        for ii, (rr, dd, mm) in enumerate(zip(ra, dec, mag_norm)):
-            file_handle.write('object %d ' % (ii+1))
-            file_handle.write('%.17f %.17f %.6f ' % (rr, dd, mm))
-            if ii%2 == 0:
-                file_handle.write('flatSED/sed_flat_short.txt.gz ' )
-            else:
-                file_handle.write('%s ' % sed_names[ii])
-            file_handle.write('0 0 0 0 0 0 point none none\n')
+    with open(ref_name, 'w') as ref_handle:
+        ref_handle.write('# uniqueId, raJ2000, decJ2000, u, g, r, i, z, y, isresolved, isvariable\n')
+        with open(out_name, 'w') as instcat_handle:
+            write_phoSim_header(obs, instcat_handle, phosim_header)
+            for ii, (rr, dd, mm) in enumerate(zip(ra, dec, mag_norm)):
+                instcat_handle.write('object %d ' % (ii+1))
+                instcat_handle.write('%.17f %.17f %.6f ' % (rr, dd, mm))
+                if ii%2 == 0:
+                    instcat_handle.write('flatSED/sed_flat_short.txt.gz ' )
+                    ref_handle.write('%d, %.17f, %.17f, ' % (ii+1, rr, dd))
+                    ref_handle.write('%.6f, %.6f, %.6f, %.6f, %.6f, %.6f, ' %
+                                      (mm, mm, mm, mm, mm, mm))
+                    ref_handle.write('0, 0\n')
+                else:
+                    instcat_handle.write('%s ' % sed_names[ii])
+                instcat_handle.write('0 0 0 0 0 0 point none none\n')
