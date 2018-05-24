@@ -125,8 +125,6 @@ for i_filter_1 in range(5):
         plt.text(corner_x[i_best],corner_y[i_best],
                  'z=%.1f' % (0.1*i_zz),fontsize=7)
 
-        #plt.xlabel('%s-%s (CatSim)' % (filter_1, filter_2))
-        #plt.ylabel('PhoSim-CatSim')
         plt.axhline(0.0, linestyle='--', color='r')
         plt.xticks(fontsize=5)
         plt.yticks(fontsize=5)
@@ -140,6 +138,7 @@ for i_filter in range(6):
     filter_name = 'ugrizy'[i_filter]
     true_fluxes = []
     flux_ratios = []
+    zz_arr = []
     for i_zz in range(0,8,2):
         valid = np.where(phosim_data[i_filter][i_zz]>0.0)
         for dex in valid[0]:
@@ -147,18 +146,73 @@ for i_filter in range(6):
             p_flux = phosim_data[i_filter][i_zz][dex]
             true_fluxes.append(c_flux)
             flux_ratios.append(p_flux/c_flux)
+            zz_arr.append(i_zz)
 
     true_fluxes = np.array(true_fluxes)
     flux_ratios = np.array(flux_ratios)
+    zz_arr = np.array(zz_arr)
 
     plt.figsize = (30,30)
+    plt.subplot(2,2,1)
     plt.scatter(true_fluxes, flux_ratios, s=5)
-    plt.xlabel('%s ADU (CatSim)' % filter_name)
-    plt.ylabel('PhoSim/CatSim (should be == gain)')
+    plt.xlabel('%s ADU (CatSim)' % filter_name, fontsize=7)
+    plt.ylabel('PhoSim/CatSim (should be == gain)',fontsize=7)
     plt.axhline(2.3,linestyle='--', color='g')
     plt.axhline(1.0, linestyle='--', color='r')
+    matplotlib.rc('ytick',labelsize=5)
+    matplotlib.rc('xtick', labelsize=5)
+    plt.title('all z', fontsize=7)
     plt.yscale('log')
     plt.xscale('log')
+
+    i_fig_list = [2, 4, 5, 6]
+    for i_fig, i_zz in zip(i_fig_list, range(0,8,2)):
+        plt.subplot(3,2,i_fig)
+        valid = np.where(zz_arr==i_zz)
+        if len(valid[0])==0:
+            continue
+
+        plt.scatter(true_fluxes[valid], flux_ratios[valid], s=5)
+
+        x_min = true_fluxes[valid].min()
+        x_max = true_fluxes[valid].max()
+        y_min = flux_ratios[valid].min()
+        y_max = flux_ratios[valid].max()
+        if 1.0<y_min:
+            y_min=1.0
+        if 1.0>y_max:
+            y_max=1.0
+
+        dx=x_max-x_min
+        dy=y_max-y_min
+        corner_x = np.array([x_min+0.25*dx,x_min+0.25*dx, x_max-0.25*dx,x_max-0.25*dx])
+        corner_y = np.array([y_min+0.25*dy,y_max-0.25*dy,y_min+0.25*dy,y_max-0.25*dy])
+        i_best = -1
+        d_best = 0.0
+        for i_c in range(4):
+            dd = np.sqrt((np.log10(true_fluxes[valid])-np.log10(corner_x[i_c]))**2+
+                         (np.log10(flux_ratios[valid])-np.log10(corner_y[i_c]))**2)
+
+            dd_min = np.min(dd)
+            if dd_min>d_best:
+                d_best=dd_min
+                i_best=i_c
+
+        plt.axhline(1.0, linestyle='--', color='r')
+        plt.axhline(2.3, linestyle='--', color='g')
+        #plt.yscale('log')
+        #plt.xscale('log')
+
+        plt.text(corner_x[i_best],corner_y[i_best],
+                 'z=%.1f' % (0.1*i_zz),fontsize=7)
+
+
+        matplotlib.rc('ytick',labelsize=5)
+        matplotlib.rc('xtick', labelsize=5)
+        plt.yscale('log')
+        #plt.xscale('log')
+
+
     fig_name = os.path.join(fig_dir, 'fluxes_%s.eps' % filter_name)
     plt.savefig(fig_name)
     plt.close()
