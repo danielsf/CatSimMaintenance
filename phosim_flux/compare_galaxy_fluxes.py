@@ -61,6 +61,7 @@ for i_filter_1 in range(5):
     true_colors = []
     delta_colors = []
     zz_arr = []
+    id_arr = []
 
     for i_zz in range(0,8,2):
         valid = np.where(np.logical_and(phosim_data[i_filter_1][i_zz]>0.0,
@@ -73,10 +74,21 @@ for i_filter_1 in range(5):
             p_color = -2.5*np.log10(p_color)
             delta_colors.append(p_color-c_color)
             zz_arr.append(i_zz)
+            id_arr.append(dex)
 
     true_colors = np.array(true_colors)
     delta_colors = np.array(delta_colors)
     zz_arr = np.array(zz_arr)
+    id_arr = np.array(id_arr)
+    if i_filter_1 == 1:
+        for id_val in np.unique(id_arr):
+           this_obj = np.where(id_arr==id_val)
+           this_color = delta_colors[this_obj]
+           d_min = delta_colors.min()
+           d_max = delta_colors.max()
+           if d_max-d_min>0.2:
+               print('d_color %e id %d' % (d_max-d_min, id_val+1))
+
 
     plt.figsize=(30,30)
     plt.subplot(2,2,1)
