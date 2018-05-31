@@ -149,7 +149,8 @@ def process_instance_catalog(catalog_name, centroid_dir, bp_dict):
 
     np.testing.assert_array_equal(phosim_objid_arr, objid_arr)
 
-    return (objid_arr, flux_arr, phosim_flux_arr, redshift_arr, magnorm_arr)
+    return (objid_arr, flux_arr, phosim_flux_arr,
+            redshift_arr, magnorm_arr, filter_name)
 
 
 if __name__ == "__main__":
@@ -165,13 +166,27 @@ if __name__ == "__main__":
 
     instcat_list = os.listdir(args.instcat_dir)
 
+    phosim_flux_dict = {}
+    objid_dict = {}
+    catsim_flux_dict = {}
+    magnorm_dict = {}
+    redshift_dict = {}
+
     for instcat in instcat_list:
         instcat_file = os.path.join(args.instcat_dir, instcat)
         print('processing %s' % instcat)
 
         (objid, flux, phosim_flux,
-         redshift, magnorm) = process_instance_catalog(instcat_file, args.centroid_dir,
-                                                       bp_dict)
+         redshift, magnorm, filter_name) = process_instance_catalog(instcat_file,
+                                                                    args.centroid_dir,
+                                                                    bp_dict)
+
+
+        objid_dict[filter_name] = objid
+        phosim_flux_dict[filter_name] = phosim_flux
+        catsim_flux_dict[filter_name] = flux
+        magnorm_dict[filter_name] = magnorm
+        redshift_dict[filter_name] = redshift
 
         dmag = -2.5*np.log10(flux/phosim_flux)
         phosim_mag = -2.5*np.log10(phosim_flux)
@@ -202,3 +217,26 @@ if __name__ == "__main__":
         fig_name = os.path.join(args.fig_dir, instcat+'.png')
         plt.savefig(fig_name)
         plt.close()
+
+    plt.figsize = (30,30)
+    for i_f_1 in range(5):
+        i_f_2 = i_f_1 + 1
+        filter_1 = 'ugrizy'[i_f_1]
+        filter_2 = 'ugrizy'[i_f_2]
+        np.testing.assert_array_equal(objid_dict[filter_1], objid_dict[filter_2])
+        np.testing.assert_array_equal(magnorm_dict[filter_1], magnorm_dict[filter_2])
+        np.testing.assert_array_equal(redshift_dict[filter_1], redshift_dict[filter_2])
+
+        plt.subplot(3,2,i_f_1+1)
+        plt.title('%s-%s' % (filter_1, filter_2), fontsize=7)
+        phosim_color = 2.5*np.log10(phosim_flux_dict[filter_1]/phosim_flux_dict[filter_2])
+        catsim_color = 2.5*np.log10(catsim_flux_dict[filter_1]/catsim_flux_dict[filter_2])
+        catsim_color -= phosim_color
+        plot_color_mesh(phosim_color, catsim_color, 0.01, 0.01)
+        if i_f_1 == 0:
+            plt.xlabel('phosim color', fontsize=7)
+            plt.ylabel('catsim_color-phosim_color', fontsize=7)
+
+    fig_name = os.path.join(args.fig_dir,'color_plot.png')
+    plt.tight_layout()
+    plt.savefig(fig_name)
