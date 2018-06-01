@@ -195,6 +195,7 @@ if __name__ == "__main__":
         plot_color_mesh(phosim_mag, dmag, 0.01, 0.01)
         plt.xlabel('-2.5*log10(phosim_flux)', fontsize=7)
         plt.ylabel('-2.5*log10(catsim_flux/phosim_flux)', fontsize=7)
+        plt.title(filter_name, fontsize=7)
 
         plt.subplot(2,2,2)
         plot_color_mesh(phosim_mag, dmag, 0.01, 0.01)
@@ -218,8 +219,9 @@ if __name__ == "__main__":
         plt.savefig(fig_name)
         plt.close()
 
-    plt.figsize = (30,30)
     for i_f_1 in range(5):
+        plt.figsize = (30,30)
+
         i_f_2 = i_f_1 + 1
         filter_1 = 'ugrizy'[i_f_1]
         filter_2 = 'ugrizy'[i_f_2]
@@ -227,16 +229,14 @@ if __name__ == "__main__":
         np.testing.assert_array_equal(magnorm_dict[filter_1], magnorm_dict[filter_2])
         np.testing.assert_array_equal(redshift_dict[filter_1], redshift_dict[filter_2])
 
-        plt.subplot(3,2,i_f_1+1)
         plt.title('%s-%s' % (filter_1, filter_2), fontsize=7)
         phosim_color = 2.5*np.log10(phosim_flux_dict[filter_1]/phosim_flux_dict[filter_2])
         catsim_color = 2.5*np.log10(catsim_flux_dict[filter_1]/catsim_flux_dict[filter_2])
         catsim_color -= phosim_color
         plot_color_mesh(phosim_color, catsim_color, 0.01, 0.01)
-        if i_f_1 == 0:
-            plt.xlabel('phosim color', fontsize=7)
-            plt.ylabel('catsim_color-phosim_color', fontsize=7)
+        plt.xlabel('phosim color', fontsize=7)
+        plt.ylabel('catsim_color-phosim_color', fontsize=7)
 
-    fig_name = os.path.join(args.fig_dir,'color_plot.png')
-    plt.tight_layout()
-    plt.savefig(fig_name)
+        fig_name = os.path.join(args.fig_dir,'%s_%s_color_plot.png' % (filter_1, filter_2))
+        plt.savefig(fig_name)
+        plt.close()
