@@ -240,3 +240,26 @@ if __name__ == "__main__":
         fig_name = os.path.join(args.fig_dir,'%s_%s_color_plot.png' % (filter_1, filter_2))
         plt.savefig(fig_name)
         plt.close()
+
+    for filter_name in 'ugrizy':
+        plt.figsize = (30,30)
+        plt.subplot(1,2,1)
+        phosim_mag = -2.5*np.log10(phosim_flux_dict[filter_name])
+        ratio = catsim_flux_dict[filter_name]/phosim_flux_dict[filter_name]
+        plot_color_mesh(phosim_mag, ratio, 0.01, 0.01)
+        plt.title('%s' % filter_name, fontsize=7)
+        plt.xlabel('-2.5*log10(phosim_flux)')
+        plt.ylabel('catsim_flux/phosim_flux')
+
+        plt.subplot(1,2,2)
+        plot_color_mesh(phosim_mag, ratio, 0.01, 0.01)
+        plt.title('%s' % filter_name, fontsize=7)
+        plt.xlabel('-2.5*log10(phosim_flux)')
+        plt.ylabel('catsim_flux/phosim_flux')
+        plt.ylim(0.8,1.2)
+
+        plt.tight_layout()
+
+        fig_name = os.path.join(args.fig_dir,'%s_flux_plot.png' % filter_name)
+        plt.savefig(fig_name)
+        plt.close()
