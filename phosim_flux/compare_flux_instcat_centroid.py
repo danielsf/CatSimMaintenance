@@ -301,23 +301,64 @@ if __name__ == "__main__":
 
         xmm, ymm = focalPlaneCoordsFromPupilCoordsLSST(xpup, ypup, band=filter_name)
 
-        #xmm_grid = np.arange(xmm.min(),xmm.max(),0.1)
-        #ymm_grid = np.arange(ymm.min(),ymm.max(),0.1)
-        #mesh = np.meshgrid(xmm_grid, ymm_grid)
-        #xmm_gri
-
         phosim_color = 2.5*np.log10(phosim_flux_dict[filter_1]/phosim_flux_dict[filter_2])
         catsim_color = 2.5*np.log10(catsim_flux_dict[filter_1]/catsim_flux_dict[filter_2])
         dcolor = catsim_color - phosim_color
-        sorted_dex = np.argsort(np.abs(dcolor))
-        dcolor = dcolor[sorted_dex]
-        xmm = xmm[sorted_dex]
-        ymm = ymm[sorted_dex]
+
+        dmm = 1.0
+        xmm_grid = np.arange(xmm.min(),xmm.max()+dmm,dmm)
+        ymm_grid = np.arange(ymm.min(),ymm.max()+dmm,dmm)
+        n_x = len(xmm_grid)
+        n_y = len(ymm_grid)
+        mesh = np.meshgrid(xmm_grid, ymm_grid)
+        assert mesh[0].shape == (n_y, n_x)
+        xmm_grid = mesh[0]
+        ymm_grid = mesh[1]
+
+        assigned_dexes = np.zeros(len(xmm), dtype=int)
+        for ii, (xx, yy) in enumerate(zip(xmm, ymm)):
+            ix = int(np.round((xx-xmm.min())/dmm))
+            iy = int(np.round((yy-ymm.min())/dmm))
+            dex = iy*n_x + ix
+            assigned_dexes[ii] = dex
+
+        median_dcolor = np.NaN*np.ones(xmm_grid.shape, dtype=float)
+        var_dcolor = np.NaN*np.ones(xmm_grid.shape, dtype=float)
+        max_dcolor = np.NaN*np.ones(xmm_grid.shape, dtype=float)
+        global_med = np.median(dcolor)
+        for dex in np.unique(assigned_dexes):
+            i_x = dex%n_x
+            i_y = dex//n_x
+            valid = np.where(assigned_dexes==dex)
+            dcolor_valid = dcolor[valid]
+            med = np.median(dcolor_valid)
+            var = np.mean((dcolor_valid-np.mean(dcolor_valid))**2)
+            mx_dex = np.argmax(np.abs(dcolor_valid))
+            mx = dcolor_valid[mx_dex]
+            median_dcolor[i_x][i_y] = med
+            var_dcolor[i_x][i_y] = var
+            max_dcolor[i_x][i_y] = mx
+
+        median_dcolor = np.ma.masked_where(np.isnan(median_dcolor), median_dcolor)
+        var_dcolor = np.ma.masked_where(np.isnan(var_dcolor), var_dcolor)
+        max_dcolor = np.ma.masked_where(np.isnan(max_dcolor), max_dcolor)
+
+        vmin = min(median_dcolor.min(),var_dcolor.min(), max_dcolor.min())
+        vmax = max(median_dcolor.max(), var_dcolor.max(), max_dcolor.max())
 
         plt.figsize=(30,30)
-        plt.scatter(xmm, ymm, c=dcolor, s=3)
-        plt.title('%s-%s' % (filter_1, filter_2), fontsize=7)
-        plt.colorbar(label='catsim_color-phosim_color')
+        plt.subplot(2,1,1)
+        plt.title('%s-%s' % (filter_1,filter_2))
+        plt.pcolormesh(xmm_grid, ymm_grid, median_dcolor, vmin=vmin, vmax=vmax)
+        plt.colorbar(label='median delta color')
+        #plt.subplot(2,2,2)
+        #plt.pcolormesh(xmm_grid, ymm_grid, var_dcolor)
+        #plt.colorbar(label='variance delta color')
+        plt.subplot(2,1,2)
+        plt.pcolormesh(xmm_grid, ymm_grid, max_dcolor,vmin=vmin, vmax=vmax)
+        plt.colorbar(label='extreme delta color')
+
+        plt.tight_layout()
         fig_name = 'focal_plane_dcolor_%s_%s.png' % (filter_1, filter_2)
         plt.savefig(os.path.join(args.fig_dir, fig_name))
         plt.close()
