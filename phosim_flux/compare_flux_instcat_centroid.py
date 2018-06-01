@@ -7,6 +7,8 @@ import numpy as np
 from lsst.utils import getPackageDir
 from lsst.sims.photUtils import Sed, BandpassDict, PhotometricParameters
 from lsst.sims.photUtils import getImsimFluxNorm
+from lsst.sims.coordUtils import pupilCoordsFromPixelCoordsLSST
+from lsst.sims.coordUtils import focalPlaneCoordsFromPupilCoordsLSST
 
 import argparse
 
@@ -120,15 +122,25 @@ def process_instance_catalog(catalog_name, centroid_dir, bp_dict):
     centroid_files = os.listdir(centroid_dir)
     phosim_objid_arr = []
     phosim_flux_arr = []
+    x_arr = []
+    y_arr = []
+    chip_name_arr = []
     dtype = np.dtype([('id', int), ('phot', float), ('x', float), ('y', float)])
     for file_name in centroid_files:
         if 'e_%d' % obshistid not in file_name or 'f%d' % i_filter not in file_name:
             continue
+        name_params = file_name.split('_')
+        raft = name_params[5]
+        sensor = name_params[6]
+        chip_name = '%s:%s,%s %s:%s,%s' % (raft[0],raft[1],raft[2],sensor[0],sensor[1],sensor[2])
         full_name = os.path.join(centroid_dir, file_name)
         data = np.genfromtxt(full_name, dtype=dtype, skip_header=1)
         for line in data:
             phosim_objid_arr.append(line['id'])
             phosim_flux_arr.append(line['phot'])
+            x_arr.append(line['x'])
+            y_arr.append(line['y'])
+            chip_name_arr.append(chip_name)
 
     objid_arr = np.array(objid_arr)
     flux_arr = np.array(flux_arr)
@@ -136,6 +148,9 @@ def process_instance_catalog(catalog_name, centroid_dir, bp_dict):
     magnorm_arr = np.array(magnorm_arr)
     phosim_objid_arr = np.array(phosim_objid_arr)
     phosim_flux_arr = np.array(phosim_flux_arr)
+    x_arr = np.array(x_arr)
+    y_arr = np.array(y_arr)
+    chip_name_arr = np.array(chip_name_arr)
 
     sorted_dex = np.argsort(objid_arr)
     objid_arr = objid_arr[sorted_dex]
@@ -146,11 +161,15 @@ def process_instance_catalog(catalog_name, centroid_dir, bp_dict):
     sorted_dex = np.argsort(phosim_objid_arr)
     phosim_objid_arr = phosim_objid_arr[sorted_dex]
     phosim_flux_arr = phosim_flux_arr[sorted_dex]
+    x_arr = x_arr[sorted_dex]
+    y_arr = y_arr[sorted_dex]
+    chip_name_arr = chip_name_arr[sorted_dex]
 
     np.testing.assert_array_equal(phosim_objid_arr, objid_arr)
 
     return (objid_arr, flux_arr, phosim_flux_arr,
-            redshift_arr, magnorm_arr, filter_name)
+            redshift_arr, magnorm_arr,
+            x_arr, y_arr, chip_name_arr, filter_name)
 
 
 if __name__ == "__main__":
@@ -171,15 +190,19 @@ if __name__ == "__main__":
     catsim_flux_dict = {}
     magnorm_dict = {}
     redshift_dict = {}
+    xpix_dict = {}
+    ypix_dict = {}
+    chip_name_dict = {}
 
     for instcat in instcat_list:
         instcat_file = os.path.join(args.instcat_dir, instcat)
         print('processing %s' % instcat)
 
         (objid, flux, phosim_flux,
-         redshift, magnorm, filter_name) = process_instance_catalog(instcat_file,
-                                                                    args.centroid_dir,
-                                                                    bp_dict)
+         redshift, magnorm,
+         xpix, ypix, chip_name, filter_name) = process_instance_catalog(instcat_file,
+                                                                        args.centroid_dir,
+                                                                        bp_dict)
 
 
         objid_dict[filter_name] = objid
@@ -187,6 +210,9 @@ if __name__ == "__main__":
         catsim_flux_dict[filter_name] = flux
         magnorm_dict[filter_name] = magnorm
         redshift_dict[filter_name] = redshift
+        xpix_dict[filter_name] = xpix
+        ypix_dict[filter_name] = ypix
+        chip_name_dict[filter_name] = chip_name
 
         dmag = -2.5*np.log10(flux/phosim_flux)
         phosim_mag = -2.5*np.log10(phosim_flux)
@@ -262,4 +288,36 @@ if __name__ == "__main__":
 
         fig_name = os.path.join(args.fig_dir,'%s_flux_plot.png' % filter_name)
         plt.savefig(fig_name)
+        plt.close()
+
+    for i_filter in range(5):
+        filter_name = 'ugrizy'[i_filter]
+        filter_1 = filter_name
+        filter_2 = 'ugrizy'[i_filter+1]
+        xpup, ypup = pupilCoordsFromPixelCoordsLSST(xpix_dict[filter_name],
+                                                    ypix_dict[filter_name],
+                                                    chipName=chip_name_dict[filter_name],
+                                                    band=filter_name)
+
+        xmm, ymm = focalPlaneCoordsFromPupilCoordsLSST(xpup, ypup, band=filter_name)
+
+        #xmm_grid = np.arange(xmm.min(),xmm.max(),0.1)
+        #ymm_grid = np.arange(ymm.min(),ymm.max(),0.1)
+        #mesh = np.meshgrid(xmm_grid, ymm_grid)
+        #xmm_gri
+
+        phosim_color = 2.5*np.log10(phosim_flux_dict[filter_1]/phosim_flux_dict[filter_2])
+        catsim_color = 2.5*np.log10(catsim_flux_dict[filter_1]/catsim_flux_dict[filter_2])
+        dcolor = catsim_color - phosim_color
+        sorted_dex = np.argsort(np.abs(dcolor))
+        dcolor = dcolor[sorted_dex]
+        xmm = xmm[sorted_dex]
+        ymm = ymm[sorted_dex]
+
+        plt.figsize=(30,30)
+        plt.scatter(xmm, ymm, c=dcolor, s=3)
+        plt.title('%s-%s' % (filter_1, filter_2), fontsize=7)
+        plt.colorbar(label='catsim_color-phosim_color')
+        fig_name = 'focal_plane_dcolor_%s_%s.png' % (filter_1, filter_2)
+        plt.savefig(os.path.join(args.fig_dir, fig_name))
         plt.close()
